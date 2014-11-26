@@ -1,0 +1,60 @@
+<?php
+/* Copyright (C) 2014 fhcomplete.org
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+ *
+ * Authors: Andreas Oesterreicher <andreas.oesterreicher@technikum-wien.at>
+ */
+/**
+ * Initialisierung des Addons
+ */
+?>
+addon.push( 
+{
+	init: function() 
+	{
+		// Diese Funktion wird nach dem Laden des FAS aufgerufen
+
+		// Menuepunkt hinzufuegen
+		extrasmenue = document.getElementById("menu-extras-popup");
+
+		var menuentry = document.createElement("menuitem");
+		menuentry.setAttribute("id","addons-abrechnung-open");
+		menuentry.setAttribute("label","Mitarbeiter Abrechnung");
+		menuentry.addEventListener("command",AddonAbrechnungMenuOpen, true);
+
+		extrasmenue.appendChild(menuentry);
+	},
+	selectMitarbeiter: function(person_id, mitarbeiter_uid)
+	{
+	},
+	selectStudent: function(person_id, prestudent_id, student_uid)
+	{
+	},
+	selectVerband: function(item)
+	{
+	},
+	selectInstitut: function(institut)
+	{
+	},
+	selectLektor: function(lektor)
+	{
+	}
+});
+
+function AddonAbrechnungMenuOpen()
+{
+	window.open('../addons/abrechnung/vilesci/abrechnung.php');
+}
