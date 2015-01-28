@@ -102,14 +102,38 @@ if(!$result = @$db->db_query("SELECT 1 FROM addon.tbl_abrechnung"))
 
 }
 
+/// Nicht benoetigte Spalten entfernen
+if($result = @$db->db_query("SELECT abzuege FROM addon.tbl_abrechnung"))
+{
 
+	$qry = "ALTER TABLE addon.tbl_abrechnung DROP COLUMN abzuege;
+	ALTER TABLE addon.tbl_abrechnung DROP COLUMN honorar_extra;";
+
+	if(!$db->db_query($qry))
+		echo '<strong>addon.tbl_abrechnung: '.$db->db_last_error().'</strong><br>';
+	else 
+		echo ' addon.tbl_abrechnung: Spalte abzuege und honorar_extra entfernt!<br>';
+
+}
+
+if(!$result = @$db->db_query("SELECT log FROM addon.tbl_abrechnung"))
+{
+
+	$qry = "ALTER TABLE addon.tbl_abrechnung ADD COLUMN log text;";
+
+	if(!$db->db_query($qry))
+		echo '<strong>addon.tbl_abrechnung: '.$db->db_last_error().'</strong><br>';
+	else 
+		echo ' addon.tbl_abrechnung: Spalte log hinzugefuegt!<br>';
+
+}
 echo '<br>Aktualisierung abgeschlossen<br><br>';
 echo '<h2>Gegenprüfung</h2>';
 
 
 // Liste der verwendeten Tabellen / Spalten des Addons
 $tabellen=array(
-	"addon.tbl_abrechnung"  => array("abrechnung_id","mitarbeiter_uid","kostenstelle_id","konto_id","abrechnungsdatum","sv_lfd","sv_satz","sv_teiler","honorar_dgf","honorar_offen","honorar_extra","brutto","netto","lst_lfd","abzuege"),
+	"addon.tbl_abrechnung"  => array("abrechnung_id","mitarbeiter_uid","kostenstelle_id","konto_id","abrechnungsdatum","sv_lfd","sv_satz","sv_teiler","honorar_dgf","honorar_offen","brutto","netto","lst_lfd","log"),
 );
 
 

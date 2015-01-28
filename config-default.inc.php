@@ -1,4 +1,7 @@
 <?php
+// Kundennummer des Steuerberaters fuer CSV Export
+define('KUNDENNUMMER','000');
+
 // Hoechstbemessungsgrundlage
 define('SV_HOECHSTBEMESSUNGSGRUNDLAGE',4440);
 

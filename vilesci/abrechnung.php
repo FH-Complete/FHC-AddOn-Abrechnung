@@ -30,6 +30,7 @@ require_once('../../../include/vertrag.class.php');
 require_once('../../../include/mitarbeiter.class.php');
 require_once('../../../include/bisverwendung.class.php');
 require_once('../../../include/studiensemester.class.php');
+require_once('../../../include/wawi_kostenstelle.class.php');
 require_once('../../../include/datum.class.php');
 require_once('../include/abrechnung.class.php');
 
@@ -51,49 +52,53 @@ $studiensemester_kurzbz = (isset($_GET['studiensemester_kurzbz'])?$_GET['studien
 
 echo '<!DOCTYPE html>
 <html lang="de">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="">
-    <meta name="author" content="">
-    <link rel="icon" href="../skin/favicon.ico">
-    <!-- Bootstrap core CSS -->
-    <link href="../skin/bootstrap.min.css" rel="stylesheet">
-    <!-- Custom styles for this template -->
-    <link href="../skin/dashboard.css" rel="stylesheet">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="">
+	<meta name="author" content="Andreas Österreicher" >
+	<link rel="icon" href="../skin/favicon.ico">
+	<link href="../skin/bootstrap.min.css" rel="stylesheet">
+	<link href="../skin/dashboard.css" rel="stylesheet">
 	<link rel="stylesheet" href="../../../skin/fhcomplete.css" type="text/css">
 	<link rel="stylesheet" href="../../../skin/tablesort.css" type="text/css">
 	<script type="text/javascript" src="../../../include/js/jquery1.9.min.js"></script>	
 	<link rel="stylesheet" type="text/css" href="../../../skin/jquery-ui-1.9.2.custom.min.css"/>	
 	<script src="../include/js/bootstrap.min.js"></script>
-    <title>Abrechnung</title>
-  </head>
+	<title>Abrechnung</title>
 </head>
 <body>
 <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
-      <div class="container-fluid">
-        <div class="navbar-header">
-          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="#">Abrechnung</a>
-        </div>
+	<div class="container-fluid">
+		<div class="navbar-header">
+			<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+				<span class="sr-only">Toggle navigation</span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+			</button>
+			<a class="navbar-brand" href="#">Abrechnung</a>
+		</div>
         <div id="navbar" class="navbar-collapse collapse">
-          <ul class="nav navbar-nav navbar-right">
-			<li><a href="abrechnung.php">Mitarbeiter wechseln</a></li>
-            <li><a href="abrechnung.php?work=nochnichtabgerechnet">Übersichtsliste</a></li>
-          </ul>
-        </div>
-      </div>
-    </nav>
+			<ul class="nav navbar-nav navbar-right">
+				<li><a href="abrechnung.php">Mitarbeiter wechseln</a></li>
+				<li><a href="abrechnung.php?work=nochnichtabgerechnet">Übersichtsliste</a></li>
+				<li class="dropdown">
+					<a href="#export" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true">Export <span class="caret"></span></a>
+					<ul class="dropdown-menu" role="menu" data-name="data">
+						<li><a href="abrechnung.php?work=csvexport">LV60-Export</a></li>
+						<li><a href="../../../content/statistik/vertragsuebersicht.xls.php">SV-Export</a></li>
+					</ul>
+				</li>
+			</ul>
+		</div>
+	</div>
+</nav>
 <div class="container-fluid">
-      <div class="row">
-        <div class="col-sm-3 col-md-2 sidebar">
-          <ul class="nav nav-sidebar">';
+	<div class="row">
+		<div class="col-sm-3 col-md-2 sidebar">
+			<ul class="nav nav-sidebar">';
 
 if($username!='')
 {
@@ -104,17 +109,15 @@ if($username!='')
 		$username='';
 	}
 
-	echo '<center><strong>'.$db->convert_html_chars($mitarbeiter->nachname.' '.$mitarbeiter->vorname).'</strong></center>';
-
+	echo '<br><strong>'.$db->convert_html_chars($mitarbeiter->nachname.' '.$mitarbeiter->vorname).'</strong>';
 	echo '<li '.($work!='uebersicht'?'class="active"':'').'><a href="abrechnung.php?username='.$username.'&abrechnungsmonat='.$abrechnungsmonat.'">Abrechnung</a></li>';
 	echo '<li '.($work=='uebersicht'?'class="active"':'').'><a href="abrechnung.php?username='.$username.'&abrechnungsmonat='.$abrechnungsmonat.'&work=uebersicht">Übersicht</a></li>';
-	echo '<li><a href="#Export">CSV-Export</a></li>';
+	
 }
 echo '
           </ul>
         </div>
         <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
-
 ';
 
 if($username=='')
@@ -158,6 +161,26 @@ if($username=='')
 		}
 		echo '</tbody>
 		</table>';
+		
+		echo '<form action="abrechnung.php?abrechnungsmonat='.$abrechnungsmonat.'&work=alleabrechnen" method="POST">';
+		printAbrechnungsmonatDropDown();
+
+		echo '
+			<input type="submit" value="Alle abrechnen" />
+			</form>';
+	}
+	elseif($work=='alleabrechnen')
+	{
+		alleAbrechnen($abrechnungsmonat);
+	}
+	elseif($work=='csvexport')
+	{
+		echo '<h1 class="page-header">CSV Export</h1>
+			Bitte wählen Sie das zu exportierende Monat:<br><br>
+		<form action="csvexport.php">';
+		printAbrechnungsmonatDropDown();
+		echo '<input type="submit" value="Exportieren" />';
+		echo '</form>';
 	}
 	else
 	{
@@ -192,26 +215,9 @@ if($username=='')
 		  });
 		</script>';
 
-		echo '
-		Abrechnungsmonat: <select name="abrechnungsmonat">
-		';
-		$jahr = date('Y');
-		$monat = date('m');
-		$dtnow = new DateTime();
-		$dtago = $dtnow->sub(new DateInterval('P6M'));
-		
-		for($i=1;$i<=12;$i++)
-		{
-			$value = $dtago->format('m/Y');
-			if($i==6)
-				$selected='selected';
-			else
-				$selected='';
-			echo '<option value="'.$value.'" '.$selected.'>'.$monatsname[1][$dtago->format('n')-1].' '.$dtago->format('Y').'</option>'; //$monatsname[1][$i-1]
-			$dtago->add(new DateInterval('P1M'));
-		}
+		printAbrechnungsmonatDropDown();
 
-		echo '</select>
+		echo '
 		<br><br>
 
 		<input type="submit" value="Abrechnung starten" />
@@ -293,6 +299,14 @@ if($username!='')
 			{
 				echo '<span class="error">Vertragsstart konnte nicht ermittelt werden.</span>';
 			}
+		}
+		elseif($work=='deleteAbrechnung')
+		{
+			$abrechnung = new abrechnung();
+			if($abrechnung->deleteAbrechnung($username, $abrechnungsdatum))
+				echo '<br><span class="ok">Abrechnung wurde erfolgreich entfernt</span>';
+			else
+				echo '<br><span class="error">Fehler beim Löschen der Abrechnung</span>';
 		}
 
 		// Alle noch nicht abgerechneten Verträge anzeigen
@@ -383,7 +397,7 @@ if($username!='')
 
 							if($work=='abrechnen')
 							{
-								$abrechnung->loadVertragsAufteilung($vertrag_arr);
+								$abrechnung->loadVertragsAufteilung($vertrag_arr, $abrechnungsmonat);
 
 								if($abrechnung->saveAbrechnung())
 								{
@@ -408,6 +422,20 @@ if($username!='')
 					else
 					{
 						echo 'Dieser Monat wurde bereits abgerechnet';
+						if($abrechnung->isletzteAbrechnung($username, $abrechnungsdatum))
+						{
+							echo '<script>
+									function confirmDelete()
+									{
+										return confirm("Sind Sie sicher dass Sie diese Abrechnung löschen wollen?");
+									}
+								</script>
+								<form style="display: inline" action="abrechnung.php?username='.$db->convert_html_chars($username).'&abrechnungsmonat='.$db->convert_html_chars($abrechnungsmonat).'" method="POST" onsubmit="return confirmDelete()">
+								<input type="hidden" name="work" value="deleteAbrechnung" />
+								<input type="submit" value="diese Abrechnung löschen" />
+								</form>
+								';
+						}
 						if($abrechnung->abschlussNoetig($username, $abrechnungsdatum, $verwendung_obj))
 						{
 							// Anwesenheiten pruefen
@@ -418,6 +446,14 @@ if($username!='')
 							echo '<div style="background-color:white; overflow:auto; border: 1px solid black; padding:5px;">';
 							echo nl2br($abrechnung->log);
 							echo '</div>';						
+						}
+						else
+						{
+							$abrechnung->getAbrechnungMitarbeiter($username, $abrechnungsdatum);
+							echo '<h2>Abrechnungsdetails</h2>';
+							echo '<div class="abrechnungsdetails">';
+							echo nl2br($abrechnung->log);
+							echo '</div>';
 						}
 					}
 				}
@@ -434,6 +470,101 @@ if($username!='')
 			{
 				echo "Es wurde keine aktuelle Verwendung für diesen Abrechnungszeitpunkt gefunden";
 			}
+		}
+	}
+}
+
+function alleAbrechnen($abrechnungsmonat)
+{
+
+	$abrechnung_user = new abrechnung();
+	$abrechnung_user->loadMitarbeiterUnabgerechnet();
+
+	$jahr = mb_substr($abrechnungsmonat, mb_strpos($abrechnungsmonat,'/')+1);
+	$monat = mb_substr($abrechnungsmonat,0,mb_strpos($abrechnungsmonat,'/'));
+	$abrechnungsdatum=date('Y-m-t',mktime(0,0,0,$monat,1, $jahr));	
+
+	foreach($abrechnung_user->result as $row_user)
+	{
+		$username = $row_user->uid;
+
+		$abrechnung=new abrechnung();
+
+		$mitarbeiter = new mitarbeiter();
+		$mitarbeiter->load($username);
+
+		// Alle noch nicht abgerechneten Verträge anzeigen
+		$vertrag = new vertrag();
+		$vertrag->loadVertrag($mitarbeiter->person_id, false);
+
+		$gesamtbetrag=0;
+		$vertrag_arr=array();
+		foreach($vertrag->result as $row)
+		{
+			$gesamtbetrag+=$row->betrag;
+			$vertrag_arr[]=$row->vertrag_id;
+		}
+
+		// BIS-Verwendung laden um Abrechnungszeitraum zu ermitteln
+		$bisverwendung = new bisverwendung();
+
+		if($bisverwendung->getVerwendungDatum($username, $abrechnungsdatum))
+		{
+			if(count($bisverwendung->result)>0)
+			{
+				$verwendungfound=false;
+				foreach($bisverwendung->result as $row)
+				{
+					if($row->beginn!='' && $row->ende!='' && in_array($row->verwendung_code,array(1,2)))
+					{
+						$startdatum = $row->beginn;
+						$endedatum = $row->ende;
+						$bisverwendung_id = $row->bisverwendung_id;
+
+						$verwendung_obj = $row;
+						$verwendungfound=true;
+						break;
+					}
+				}
+
+				if($verwendungfound)
+				{
+					if(!$abrechnung->exists($username, $abrechnungsdatum))
+					{
+						if(!$abrechnung->abrechnung($username, $abrechnungsdatum, $gesamtbetrag, $verwendung_obj))
+						{
+								echo '<br><span class="error">'.$username.' fehlgeschlagen:'.$abrechnung->errormsg.'</span>';
+						}
+						else
+						{
+							$abrechnung->loadVertragsAufteilung($vertrag_arr, $abrechnungsmonat);
+							if($abrechnung->saveAbrechnung())
+							{
+								echo '<br>'.$username.' erfolgreich abgerechnet';
+							}
+							else
+								echo '<br><span class="error">'.$username.' fehlgeschalgen:'.$abrechnung->errormsg.'</span>';
+						
+						}
+					}
+					else
+					{
+						echo '<br>'.$username.': Dieser Monat wurde bereits abgerechnet';
+					}
+				}
+				else
+				{
+					echo '<br><span class="error">'.$username.': Es wurde keine passende Verwendung gefunden</span>';
+				}
+			}
+			else
+			{
+				echo '<br><span class="error">'.$username.': Es wurde keine passende Verwendung gefunden</span>';
+			}
+		}
+		else
+		{
+			echo '<br><span class="error">'.$username.': Es wurde keine passende Verwendung gefunden</span>';
 		}
 	}
 }
@@ -516,20 +647,54 @@ function printAbrechnungsuebersicht($username, $studiensemester_kurzbz=null)
 				<th>Abrechnungsdatum</th>
 				<th>Brutto ausbezahlt</th>
 				<th>Netto ausbezahlt</th>
+				<th>Aufteilung</th>
 			</tr>
 		</thead>
 		<tbody>';
 	$summe_brutto=0;
 	$summe_netto=0;
+	$abrechnung_data=array();
 	foreach($abrechnung->result as $row)
 	{
+		if($row->kostenstelle_id=='')
+		{
+			$abrechnung_data[$row->abrechnungsdatum]['brutto']=$row->brutto;
+			$abrechnung_data[$row->abrechnungsdatum]['netto']=$row->netto;
+			$summe_brutto+=$row->brutto;
+			$summe_netto+=$row->netto;
+		}
+		else
+		{
+			$abrechnung_data[$row->abrechnungsdatum]['aufteilung'][$row->kostenstelle_id]['brutto']=$row->brutto;
+			$abrechnung_data[$row->abrechnungsdatum]['aufteilung'][$row->kostenstelle_id]['netto']=$row->netto;
+		}		
+	}
+
+	$kostenstelle = new wawi_kostenstelle();
+	
+	foreach($abrechnung_data as $datum=>$row)
+	{	
 		echo '<tr>';
-		echo '<td>'.$datum_obj->formatDatum($row->abrechnungsdatum,'d.m.Y').'</td>';
-		echo '<td>'.number_format($row->brutto,2).'</td>';
-		echo '<td>'.number_format($row->netto,2).'</td>';
-		echo '</tr>';
-		$summe_brutto+=$row->brutto;
-		$summe_netto+=$row->netto;
+		echo '<td>'.$datum_obj->formatDatum($datum,'d.m.Y').'</td>';
+		echo '<td>'.number_format($row['brutto'],2).'</td>';
+		echo '<td>'.number_format($row['netto'],2).'</td>';
+		echo '<td>';		
+		
+		if(isset($row['aufteilung']))
+		{
+			foreach($row['aufteilung'] as $kst=>$row_kst)
+			{
+					
+				$kostenstelle->load($kst);
+				$prozent =$row_kst['brutto']/$row['brutto']*100;
+				echo $kostenstelle->bezeichnung;
+				echo ' € '.number_format($row_kst['brutto'],2).' ('.$prozent.' %)';
+				echo '<br />';
+			}
+		}
+		echo '
+		</td>
+		</tr>';
 	}
 	echo '</tbody>
 	<tfoot>
@@ -537,8 +702,34 @@ function printAbrechnungsuebersicht($username, $studiensemester_kurzbz=null)
 			<th>Gesamt</th>
 			<th>'.number_format($summe_brutto,2).'</th>
 			<th>'.number_format($summe_netto,2).'</th>
+			<th></th>
 		</tr>
 	</tfoot>
 	</table>';
+}
+
+function printAbrechnungsmonatDropDown()
+{
+	global $monatsname;
+	echo '
+	Abrechnungsmonat: <select name="abrechnungsmonat">
+	';
+	$jahr = date('Y');
+	$monat = date('m');
+	$dtnow = new DateTime();
+	$dtago = $dtnow->sub(new DateInterval('P6M'));
+	
+	for($i=1;$i<=12;$i++)
+	{
+		$value = $dtago->format('m/Y');
+		if($i==6)
+			$selected='selected';
+		else
+			$selected='';
+		echo '<option value="'.$value.'" '.$selected.'>'.$monatsname[1][$dtago->format('n')-1].' '.$dtago->format('Y').'</option>'; //$monatsname[1][$i-1]
+		$dtago->add(new DateInterval('P1M'));
+	}
+
+	echo '</select>';
 }
 ?>
