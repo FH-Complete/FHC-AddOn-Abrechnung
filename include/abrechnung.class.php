@@ -205,9 +205,10 @@ class abrechnung extends basis_db
 	 * @param $abrechnungsdatum Daten der Abrechnung
 	 * @param $honorar_gesamt Gesamthonorar Brutto das Abgerechnet werden soll
 	 * @param $verwendung_obj Verwendung die zur Abrechnung verwendet werden soll
+	 * @param $vertrag_arr Array mit den VertragsIDs die abgerechnet werden
 	 * @return boolean true wenn ok, false im Fehlerfall
 	 */
-	public function abrechnung($username, $abrechnungsdatum, $honorar_gesamt, $verwendung_obj)
+	public function abrechnung($username, $abrechnungsdatum, $honorar_gesamt, $verwendung_obj, $vertrag_arr)
 	{
 		// Globale Variablen die im Abrechnungsconfig definiert sind
 		global $cfg_sv_altersabschlag;
@@ -276,6 +277,13 @@ class abrechnung extends basis_db
 		$this->log.="\nSonderhonorar: im Gesamthonorar enthalten";
 		$this->log.="\n----------------------------------------------";
 		$this->log.="\nHonorar gesamt: ".number_format($honorar_gesamt,2);
+
+		$this->log.="\n\nAbzug für nicht gehaltene Stunden";
+		// Honorar anziehen das bis zu diesem Zeitpunkt nicht gehalten wurde
+		$abzug = $this->loadAnwesenheitsabzug($username, $vertrag_arr, $abrechnungsdatum); 
+		$this->honorar_gesamt -= $abzug;
+		
+		$this->log.="\n= ".number_format($this->honorar_gesamt,2);
 
 		$this->brutto = ($this->honorar_gesamt - $honorar_ausbezahlt) / $this->tageoffen * $this->tageabzurechnen / 7 * 6;
 		$this->log.="\n\n-> Lfd Brutto ((Honorar gesamt - bisher ausbezahlt) / Tage offen * Tage abzurechnen / 7 * 6): ".number_format($this->brutto,2);
@@ -799,6 +807,47 @@ class abrechnung extends basis_db
 			$this->errormsg = 'Fehler beim Loeschen der Abrechnung';
 			return false;
 		}
+	}
+
+	
+	/**
+	 * Berechnet den Abzug des Gesamthonorars aufgrund der Stunden die der Lektor nicht anwesend war
+	 * @param $username UID des Mitabreiters
+	 * @param $vertrag_arr Array mit den VertragsIDs
+	 * @param $abrechnungsdatum Datum der Abrechnung
+	 * @return abzug vom Gesamthonorar
+	 */
+	public function loadAnwesenheitsabzug($username, $vertrag_arr, $abrechnungsdatum)
+	{
+		$qry = "SELECT lehreinheit_id, tbl_lehrveranstaltung.bezeichnung 
+				FROM 
+					lehre.tbl_lehreinheit 
+					JOIN lehre.tbl_lehrveranstaltung USING(lehrveranstaltung_id)
+					JOIN lehre.tbl_lehreinheitmitarbeiter USING(lehreinheit_id)
+				WHERE
+					tbl_lehreinheitmitarbeiter.vertrag_id in(".$this->db_implode4SQL($vertrag_arr).");";
+		$gesamtabzug =0;
+		$datum_obj = new datum();
+		if($result = $this->db_query($qry))
+		{
+			while($row = $this->db_fetch_object($result))
+			{
+				$anwesenheit = new anwesenheit();
+				$anwesenheit->loadAnwesenheitMitarbeiter($username, $row->lehreinheit_id);
+
+				foreach($anwesenheit->anwesenheit as $anw)
+				{
+					if($anw['datum']<=$abrechnungsdatum && $anw['anwesend']==false)
+					{
+						$abzug = $anw['einheiten']*$anw['stundensatz'];
+						$this->log.="\n".$row->bezeichnung.' am '.$datum_obj->formatDatum($anw['datum'],'d.m.Y').' - '.$anw['einheiten'].' Einheiten á '.$anw['stundensatz'].' = '.$abzug;
+						$gesamtabzug+=$abzug;
+					}
+				}
+			}
+			return $gesamtabzug;
+		}
+		return false;
 	}
 }
 ?>

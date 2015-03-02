@@ -47,7 +47,17 @@ $db = new basis_db();
 
 $username = (isset($_REQUEST['username'])?$_REQUEST['username']:'');
 $work = (isset($_REQUEST['work'])?$_REQUEST['work']:'');
-$abrechnungsmonat = (isset($_REQUEST['abrechnungsmonat'])?$_REQUEST['abrechnungsmonat']:((date('m')-1).'/'.date('Y')));
+
+if(isset($_REQUEST['abrechnungsmonat']))
+	$abrechnungsmonat = $_REQUEST['abrechnungsmonat'];
+else
+{
+	if(date('m')==1)
+		$abrechnungsmonat = ('12/'.(date('Y')-1));
+	else		
+		$abrechnungsmonat = ((date('m')-1).'/'.date('Y'));
+}
+
 $studiensemester_kurzbz = (isset($_GET['studiensemester_kurzbz'])?$_GET['studiensemester_kurzbz']:null);
 
 echo '<!DOCTYPE html>
@@ -383,7 +393,7 @@ if($username!='')
 
 					if(!$abrechnung->exists($username, $abrechnungsdatum))
 					{
-						if(!$abrechnung->abrechnung($username, $abrechnungsdatum, $gesamtbetrag, $verwendung_obj))
+						if(!$abrechnung->abrechnung($username, $abrechnungsdatum, $gesamtbetrag, $verwendung_obj, $vertrag_arr))
 						{
 							echo '<span class="error">Failed:'.$abrechnung->errormsg.'</span>';
 						}
@@ -444,6 +454,13 @@ if($username!='')
 							$abrechnung->abschluss($username, $abrechnungsdatum, $gesamtbetrag, $verwendung_obj, $vertrag_arr);
 							echo '<h2>Abschluss Vorschau</h2>';
 							echo '<div style="background-color:white; overflow:auto; border: 1px solid black; padding:5px;">';
+							echo nl2br($abrechnung->log);
+							echo '</div>';
+
+							// Monatsabrechnung anzeigen
+							$abrechnung->getAbrechnungMitarbeiter($username, $abrechnungsdatum);
+							echo '<h2>Abrechnungsdetails</h2>';
+							echo '<div class="abrechnungsdetails">';
 							echo nl2br($abrechnung->log);
 							echo '</div>';						
 						}
