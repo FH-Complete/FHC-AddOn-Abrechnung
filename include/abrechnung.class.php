@@ -723,8 +723,11 @@ class abrechnung extends basis_db
 				}
 			}
 		}
-
-		$this->log.="\nAnwesenheit: $anzahl_anwesend/$anzahl_termine = ".number_format(($anzahl_anwesend/$anzahl_termine*100),2)." % ";
+		if($anzahl_termine!=0)
+			$anwesenheit_prozent = ($anzahl_anwesend/$anzahl_termine*100);
+		else
+			$anwesenheit_prozent = 0;
+		$this->log.="\nAnwesenheit: $anzahl_anwesend/$anzahl_termine = ".number_format($anwesenheit_prozent,2)." % ";
 		$this->log.="\n".$anwesenheitslog."\n";
 
 		// Berechnung der Zurueckgehaltenen Sonderzahlungen
@@ -764,7 +767,7 @@ class abrechnung extends basis_db
 		//$this->fiktivmonatsbezug = ($honorar_gesamt - $honorar_ausbezahlt) / 1 * 30/7*6;
 		//$this->log.="\nFiktivmonatsbezug ((Honorar gesamt - bisher ausbezahlt)/ 1 * 30 / 7 * 6): ".number_format($this->fiktivmonatsbezug,2);
 		$this->fiktivmonatsbezug=$honorar_offen;
-		$this->log.="\nTODO pruefen ob korrekt: Fiktivmonatbegzug = honorar_offen =  ".number_format($honorar_offen,2);
+		$this->log.="\n !! TODO: pruefen ob korrekt !!: Fiktivmonatbegzug = honorar_offen =  ".number_format($honorar_offen,2);
 
 		// SV Satz berechnen
 		$this->sv_satz = SV_SATZ;
@@ -832,7 +835,8 @@ class abrechnung extends basis_db
 		}
 
 		$this->sv_lfd = $this->sv_satz * $this->fiktivmonatsbezug / 30 * $this->tageabzurechnen;
-		$this->log.="\nLfd SV (SV-Satz * Fiktivmonatsbezug / 30 * Tage abzurechnen): ".number_format($this->sv_lfd,2);
+		$this->log.="\nLfd SV (SV-Satz * Fiktivmonatsbezug / 30 * Tage abzurechnen):".number_format($this->sv_lfd,2);
+		$this->log.="\n!! TODO: pruefen ob korrekt !! Tageabzurechnung=0 -> lfdSV=0\n";
 
 		// BMGL Lohnsteuer
 		$this->bmgllst = $this->brutto - $this->sv_lfd;
