@@ -45,6 +45,7 @@ class abrechnung extends basis_db
 	public $brutto;				// numeric(12,4)
 	public $netto;				// numeric(12,4)
 	public $lst_lfd;			// numeric(12,4)
+	public $abschluss=false;	// boolean
  
     /**
 	 * Konstruktor
@@ -464,7 +465,6 @@ class abrechnung extends basis_db
 	{
 		$this->aufteilung=array();
 
-		// TODO Aufteilung aufgrund LVPlan berechnen
 		$qry = "SELECT 
 					sum(tbl_lehreinheitmitarbeiter.semesterstunden) as semesterstunden, lehrfach.oe_kurzbz,
 					(SELECT kostenstelle_id FROM wawi.tbl_kostenstelle WHERE oe_kurzbz=lehrfach.oe_kurzbz AND aktiv LIMIT 1) as kostenstelle_id
@@ -529,7 +529,7 @@ class abrechnung extends basis_db
 
 		$qry = "BEGIN;INSERT INTO addon.tbl_abrechnung(mitarbeiter_uid, kostenstelle_id, konto_id, abrechnungsdatum, 	
 				sv_lfd, sv_satz, sv_teiler, honorar_dgf, honorar_offen, brutto, netto, 
-				lst_lfd, log) VALUES(".
+				lst_lfd, log, abschluss) VALUES(".
 				$this->db_add_param($this->mitarbeiter_uid).',null,'.
 				$this->db_add_param($this->konto_id).','.
 				$this->db_add_param($this->abrechnungsdatum).','.
@@ -541,14 +541,15 @@ class abrechnung extends basis_db
 				$this->db_add_param($this->brutto).','.
 				$this->db_add_param($this->netto).','.
 				$this->db_add_param($this->lst_lfd).','.
-				$this->db_add_param($this->log).');';
+				$this->db_add_param($this->log).','.
+				$this->db_add_param($this->abschluss, FHC_BOOLEAN).');';
 
 		foreach($this->aufteilung as $row)
 		{
 			$prozent = $row['prozent'];
 
 			$qry.= "INSERT INTO addon.tbl_abrechnung(mitarbeiter_uid, kostenstelle_id, konto_id, abrechnungsdatum, 	
-				sv_lfd, sv_satz, sv_teiler, honorar_dgf, honorar_offen, brutto, netto, lst_lfd) VALUES(".
+				sv_lfd, sv_satz, sv_teiler, honorar_dgf, honorar_offen, brutto, netto, lst_lfd, abschluss) VALUES(".
 				$this->db_add_param($this->mitarbeiter_uid).','.
 				$this->db_add_param($row['kostenstelle_id']).','.
 				$this->db_add_param($this->konto_id).','.
@@ -560,7 +561,8 @@ class abrechnung extends basis_db
 				$this->db_add_param($this->honorar_offen).','.
 				$this->db_add_param($this->brutto/100*$prozent).','.
 				$this->db_add_param($this->netto/100*$prozent).','.
-				$this->db_add_param($this->lst_lfd/100*$prozent).');';
+				$this->db_add_param($this->lst_lfd/100*$prozent).','.
+				$this->db_add_param($this->abschluss, FHC_BOOLEAN).');';
 		}
 
 		$qry.="COMMIT;";
@@ -675,11 +677,18 @@ class abrechnung extends basis_db
 	 * @return true wenn erfolgreich
 	 * @return false im Fehlerfall
 	 */
-	public function abschluss($mitarbeiter_uid, $abrechungsdatum, $honorar_gesamt, $verwendung_obj, $vertrag_arr)
+	public function abschluss($mitarbeiter_uid, $abrechnungsdatum, $honorar_gesamt, $verwendung_obj, $vertrag_arr)
 	{
+		global $cfg_sv_altersabschlag, $cfg_sv_abschlaege, $cfg_lsttgl;
+		$this->abschluss=true;
 		$datum_obj = new datum();
+		$dt_abrechnungsdatum = new DateTime($abrechnungsdatum);
 		$this->log='';
+		$this->dv_art = $verwendung_obj->dv_art;
+		$this->mitarbeiter_uid=$mitarbeiter_uid;
+		$this->abrechnungsdatum = $abrechnungsdatum;
 
+		$this->tageabzurechnen=0;
 		// Anwesenheiten ermitteln
 		$qry = "SELECT 
 					lehreinheit_id, tbl_lehrveranstaltung.bezeichnung 
@@ -687,7 +696,7 @@ class abrechnung extends basis_db
 					lehre.tbl_lehreinheitmitarbeiter 
 					JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
 					JOIN lehre.tbl_lehrveranstaltung USING(lehrveranstaltung_id)
-				WHERE vertrag_id in(".$this->implode4SQL($vertrag_arr).")";
+				WHERE vertrag_id in(".$this->db_implode4SQL($vertrag_arr).")";
 
 		$anzahl_termine=0;
 		$anzahl_anwesend=0;
@@ -750,9 +759,112 @@ class abrechnung extends basis_db
 		$this->log.="\n---------------------------------";
 		$honorar_offen = $honorar_offen - $anwesenheitsabzug;
 		$this->log.="\nSaldo: ".number_format($honorar_offen,2);
+
+		$this->brutto = $honorar_offen;	
+		//$this->fiktivmonatsbezug = ($honorar_gesamt - $honorar_ausbezahlt) / 1 * 30/7*6;
+		//$this->log.="\nFiktivmonatsbezug ((Honorar gesamt - bisher ausbezahlt)/ 1 * 30 / 7 * 6): ".number_format($this->fiktivmonatsbezug,2);
+		$this->fiktivmonatsbezug=$honorar_offen;
+		$this->log.="\nTODO pruefen ob korrekt: Fiktivmonatbegzug = honorar_offen =  ".number_format($honorar_offen,2);
+
+		// SV Satz berechnen
+		$this->sv_satz = SV_SATZ;
+		$this->log.="\n\nSV-Satz: ".$this->sv_satz." - Abschläge";
+
+		// Alter des Mitarbeiters berechenen
+		$mitarbeiter = new mitarbeiter();
+		if(!$mitarbeiter->load($mitarbeiter_uid))
+		{
+			$this->errormsg = "User Load Failed:".$mitarbeiter->errormsg;
+			return false;
+		}
+
+		$alter = date($abrechnungsdatum);
+		$dt_geburtsdatum = new DateTime($mitarbeiter->gebdatum);
+		$interval = $dt_abrechnungsdatum->diff($dt_geburtsdatum);
+		$alter = $interval->format('d');
+
+		// Altersabschlag	
+		if($alter > $cfg_sv_altersabschlag[0])
+		{
+			$this->log.="\nAlter > ".$cfg_sv_altersabschlag[0].": -".$cfg_sv_altersabschlag[1];
+			$this->sv_satz-=$cfg_sv_altersabschlag[1];
+		}
+
+		// Abschlaege
+		foreach($cfg_sv_abschlaege as $abschlag)
+		{
+			if($this->fiktivmonatsbezug<$abschlag[0])
+			{
+				$this->log.="\nFiktivmonatsbezug < ".$abschlag[0].": -".$abschlag[1];
+				$this->sv_satz-=$abschlag[1];
+				break;
+			}
+		}
+
+		// Wenn DV-Art=200 dann SV-Satz +0.05
+		if($this->dv_art==200)
+		{
+			$this->log.="\nDV-Art=200 : +0.05";
+			$this->sv_satz+=0.05;
+		}
+
+		if($this->fiktivmonatsbezug<SV_GERINGWERTIG)
+		{
+			$this->log.="\nFiktivmonatsbezug < ".SV_GERINGWERTIG.": SV-Satz=0";
+			$this->sv_satz=0;
+		}
+		elseif(11==$dt_abrechnungsdatum->format('m'))
+		{
+			// Im November werden 10 Tage hinzugefuegt wenn nicht geringwertig
+			$this->log.="\nAbrechnungsmonat=11 : Tage abzurechnen + 10";
+			$this->tageabzurechnen+=10;
+		}
+
+		$this->sv_teiler = $this->tageabzurechnen;
+		$this->log.="\n--------------------------------------------------";
+		$this->log.="\n-> SV-Satz:".$this->sv_satz;
+		$this->log.="\n";
+
+		if($this->fiktivmonatsbezug>SV_HOECHSTBEMESSUNGSGRUNDLAGE)
+		{
+			$this->log.="\nFiktivmonatsbezug > ".SV_HOECHSTBEMESSUNGSGRUNDLAGE.": Fiktivmonatsbezug = ".SV_HOECHSTBEMESSUNGSGRUNDLAGE;
+			$this->fiktivmonatsbezug = SV_HOECHSTBEMESSUNGSGRUNDLAGE;
+		}
+
+		$this->sv_lfd = $this->sv_satz * $this->fiktivmonatsbezug / 30 * $this->tageabzurechnen;
+		$this->log.="\nLfd SV (SV-Satz * Fiktivmonatsbezug / 30 * Tage abzurechnen): ".number_format($this->sv_lfd,2);
+
+		// BMGL Lohnsteuer
+		$this->bmgllst = $this->brutto - $this->sv_lfd;
+		$this->log.="\nBMGL Lst. (Lfd Brutto - Lfd SV): ".number_format($this->bmgllst,2);
+
+		// BMGL Lohnsteuer taeglich
+		$this->bmgllsttgl = $this->bmgllst;//g / $this->tageabzurechnen;
+		$this->log.="\nBMGL Lst. tgl. (BMGL Lst / Tage abzurechnen): ".number_format($this->bmgllsttgl,2);
+
+		// LSt. taeglich:
+		foreach($cfg_lsttgl as $row)
+		{
+			if($this->bmgllsttgl<=$row[0])
+			{
+				$this->log.="\nBMGL Lst. tgl. <=".$row[0]." -> ".$row[1];
+				$this->lst_tgl = $row[1];
+				break;
+			}
+		}
+		$this->log.="\nLst. tgl.:".number_format($this->lst_tgl,2);
+
+		// lfd. LSt.
+		$this->lst_lfd = $this->lst_tgl * $this->tageabzurechnen;
+		$this->log.="\nlfd. Lst. (Lst. tgl. * Tage anzurechnen): ".number_format($this->lst_lfd,2);
+
+		// lfd. NETTO
+		$this->netto = $this->bmgllst - $this->lst_lfd;
+		$this->log.="\nlfd. Netto (BMGL Lst. - lfd. Lst.): ".number_format($this->netto,2);
+
 		return true;
 	}
-	
+
 	/**
 	 * Prueft ob eine Abrechnung die letzte vorhandene ist
 	 * 
@@ -819,6 +931,8 @@ class abrechnung extends basis_db
 	 */
 	public function loadAnwesenheitsabzug($username, $vertrag_arr, $abrechnungsdatum)
 	{
+		if(count($vertrag_arr)==0)
+			return false;
 		$qry = "SELECT lehreinheit_id, tbl_lehrveranstaltung.bezeichnung 
 				FROM 
 					lehre.tbl_lehreinheit 
@@ -848,6 +962,60 @@ class abrechnung extends basis_db
 			return $gesamtabzug;
 		}
 		return false;
+	}
+
+	/**
+	 * Prueft ob eine Abrechnung die letzte vorhandene ist
+	 * 
+	 * @param $mitarbeiter_uid UID des Mitarbeiters
+	 * @param $abrechnungsdatum Datum der Abrechnung
+	 * @return true wenn es die letzte abrechnung ist
+	 * @reutrn false wenn nicht
+	 */
+	public function loadAbschluss($mitarbeiter_uid, $abrechnungsdatum)
+	{
+		$qry = "SELECT 
+					*
+				FROM 
+					addon.tbl_abrechnung 
+				WHERE 
+					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)." 
+					AND abrechnungsdatum=".$this->db_add_param($abrechnungsdatum)."
+					AND abschluss=true
+					AND kostenstelle_id is null";
+
+		if($result = $this->db_query($qry))
+		{
+			if($row = $this->db_fetch_object($result))
+			{
+				$this->abrechnung_id = $row->abrechnung_id;
+				$this->mitarbeiter_uid = $row->mitarbeiter_uid;
+				$this->kostenstelle_id = $row->kostenstelle_id;
+				$this->konto_id = $row->konto_id;
+				$this->abrechnungsdatum = $row->abrechnungsdatum;
+				$this->sv_lfd = $row->sv_lfd;
+				$this->sv_satz = $row->sv_satz;
+				$this->sv_teiler = $row->sv_teiler;
+				$this->honorar_dgf = $row->honorar_dgf;
+				$this->honorar_offen = $row->honorar_offen;
+				$this->brutto = $row->brutto;
+				$this->netto = $row->netto;
+				$this->lst_lfd = $row->lst_lfd;
+				$this->log = $row->log;
+
+				return true;
+			}
+			else
+			{
+				$this->errormsg = 'Fehler beim Laden der Daten';
+				return false;
+			}
+		}
+		else
+		{
+			$this->errormsg = 'Fehler beim Laden der Daten';
+			return false;
+		}
 	}
 }
 ?>

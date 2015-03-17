@@ -127,13 +127,26 @@ if(!$result = @$db->db_query("SELECT log FROM addon.tbl_abrechnung"))
 		echo ' addon.tbl_abrechnung: Spalte log hinzugefuegt!<br>';
 
 }
+
+if(!$result = @$db->db_query("SELECT abschluss FROM addon.tbl_abrechnung"))
+{
+
+	$qry = "ALTER TABLE addon.tbl_abrechnung ADD COLUMN abschluss boolean;";
+
+	if(!$db->db_query($qry))
+		echo '<strong>addon.tbl_abrechnung: '.$db->db_last_error().'</strong><br>';
+	else 
+		echo ' addon.tbl_abrechnung: Spalte abschluss hinzugefuegt!<br>';
+
+}
+
 echo '<br>Aktualisierung abgeschlossen<br><br>';
 echo '<h2>Gegenprüfung</h2>';
 
 
 // Liste der verwendeten Tabellen / Spalten des Addons
 $tabellen=array(
-	"addon.tbl_abrechnung"  => array("abrechnung_id","mitarbeiter_uid","kostenstelle_id","konto_id","abrechnungsdatum","sv_lfd","sv_satz","sv_teiler","honorar_dgf","honorar_offen","brutto","netto","lst_lfd","log"),
+	"addon.tbl_abrechnung"  => array("abrechnung_id","mitarbeiter_uid","kostenstelle_id","konto_id","abrechnungsdatum","sv_lfd","sv_satz","sv_teiler","honorar_dgf","honorar_offen","brutto","netto","lst_lfd","log","abschluss"),
 );
 
 
