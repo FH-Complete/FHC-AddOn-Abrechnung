@@ -46,6 +46,7 @@ class abrechnung extends basis_db
 	public $netto;				// numeric(12,4)
 	public $lst_lfd;			// numeric(12,4)
 	public $abschluss=false;	// boolean
+	public $log;				// text
  
     /**
 	 * Konstruktor
