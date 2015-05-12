@@ -221,8 +221,8 @@ function printAbrechnungsuebersicht($username, $studiensemester_kurzbz=null)
 	{	
 		echo '<tr>';
 		echo '<td>'.$datum_obj->formatDatum($datum,'d.m.Y').'</td>';
-		echo '<td>'.number_format($row['brutto'],2).'</td>';
-		echo '<td>'.number_format($row['netto'],2).'</td>';
+		echo '<td>'.(isset($row['brutto'])?number_format($row['brutto'],2):'').'</td>';
+		echo '<td>'.(isset($row['netto'])?number_format($row['netto'],2):'').'</td>';
 		echo '<td>';		
 		
 		if(isset($row['aufteilung']))
@@ -231,7 +231,10 @@ function printAbrechnungsuebersicht($username, $studiensemester_kurzbz=null)
 			{
 					
 				$kostenstelle->load($kst);
-				$prozent =$row_kst['brutto']/$row['brutto']*100;
+				if(isset($row['brutto']) && $row['brutto']!=0)
+					$prozent =$row_kst['brutto']/$row['brutto']*100;
+				else
+					$prozent='';
 				echo $kostenstelle->bezeichnung;
 				echo ' € '.number_format($row_kst['brutto'],2).' ('.$prozent.' %)';
 				echo '<br />';

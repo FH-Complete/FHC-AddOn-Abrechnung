@@ -516,6 +516,14 @@ if($username!='')
 							echo '<h2>Abrechnungsdetails</h2>';
 							echo '<div class="abrechnungsdetails">';
 							echo nl2br($abrechnung->log);
+							echo '<hr><br>SV Laufend:'.$abrechnung->sv_lfd;
+							echo '<br>SV Satz:'.$abrechnung->sv_satz;
+							echo '<br>SV Teiler:'.$abrechnung->sv_teiler;
+							echo '<br>Honorar Durchgefuehrt:'.$abrechnung->honorar_dgf;
+							echo '<br>Honorar Offen:'.$abrechnung->honorar_offen;
+							echo '<br>Brutto:'.$abrechnung->brutto;
+							echo '<br>Netto:'.$abrechnung->netto;
+							echo '<br>Lst Lfd:'.$abrechnung->lst_lfd;
 							echo '</div>';
 
 							// Abschlussabrechnung anzeigen falls vorhanden
@@ -524,6 +532,14 @@ if($username!='')
 								echo '<h2>Abschlussabrechnung</h2>';
 								echo '<div class="abrechnungsdetails">';
 								echo nl2br($abrechnung->log);
+								echo '<hr><br>SV Laufend:'.$abrechnung->sv_lfd;
+								echo '<br>SV Satz:'.$abrechnung->sv_satz;
+								echo '<br>SV Teiler:'.$abrechnung->sv_teiler;
+								echo '<br>Honorar Durchgefuehrt:'.$abrechnung->honorar_dgf;
+								echo '<br>Honorar Offen:'.$abrechnung->honorar_offen;
+								echo '<br>Brutto:'.$abrechnung->brutto;
+								echo '<br>Netto:'.$abrechnung->netto;
+								echo '<br>Lst Lfd:'.$abrechnung->lst_lfd;
 								echo '</div>';
 							}
 						}
