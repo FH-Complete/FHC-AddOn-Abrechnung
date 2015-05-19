@@ -110,7 +110,9 @@ class abrechnung extends basis_db
 					addon.tbl_abrechnung 
 				WHERE 
 					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)." 
+					AND abrechnungsdatum=".$this->db_add_param($abrechnungsdatum)."
 					AND kostenstelle_id is null
+					AND abschluss=false
 				ORDER BY 
 					abrechnungsdatum desc LIMIT 1";
 
@@ -153,7 +155,7 @@ class abrechnung extends basis_db
 	 * @param mitarbeiter_uid UID des Mitarbeiters
 	 * @return boolean true wenn ok, false im Fehlerfall
 	 */
-	public function getLetzteAbrechnung($mitarbeiter_uid)
+	public function getLetzteAbrechnung($mitarbeiter_uid, $startdatum=null)
 	{
 		$qry = "SELECT 
 					* 
@@ -162,6 +164,7 @@ class abrechnung extends basis_db
 				WHERE 
 					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)." 
 					AND kostenstelle_id is null
+					AND abrechnungsdatum>".$this->db_add_param($startdatum)."
 				ORDER BY 
 					abrechnungsdatum desc LIMIT 1";
 
@@ -221,6 +224,15 @@ class abrechnung extends basis_db
 
 		$this->log='';
 
+		$vertrag = new vertrag();
+		$vertrag->getVertraege($vertrag_arr);
+		$this->log.="Verträge die abgerechnet werden:";
+		foreach($vertrag->result as $row)
+		{
+			$this->log.="\n -> ".$row->bezeichnung.' - € '.$row->betrag.' (ID '.$row->vertrag_id.')';
+		}
+		$this->log.="\n";
+
 		$this->mitarbeiter_uid = $username;
 		$startdatum = $verwendung_obj->beginn;
 		$endedatum = $verwendung_obj->ende;
@@ -232,35 +244,43 @@ class abrechnung extends basis_db
 
 		// Letzte Abrechnung laden
 		$letzteabrechnung = new abrechnung();
-		if($letzteabrechnung->getLetzteAbrechnung($username))
+		if($letzteabrechnung->getLetzteAbrechnung($username, $startdatum))
 		{
 			$this->letztesabrechnungsdatum = $letzteabrechnung->abrechnungsdatum;
-			$honorar_durchgefuehrt = $letzteabrechnung->honorar_dgf+$letzteabrechnung->brutto;
+			//$honorar_durchgefuehrt = $letzteabrechnung->honorar_dgf+$letzteabrechnung->brutto;
 		}
 		else
 		{
-			$honorar_durchgefuehrt = 0;
+			//$honorar_durchgefuehrt = 0;
 			$this->letztesabrechnungsdatum = null;
 		}
 
+		$honorar_durchgefuehrt = $this->getAbrechnungsbrutto($username, $startdatum, $endedatum);
+
 		// Gesamttage berechenen
-		$this->tagegesamt = $this->BerechneGesamttage($startdatum, $endedatum);
+		$this->tagegesamt = $this->BerechneGesamttage($startdatum, $endedatum, $endedatum);
 		$this->log.="\nLetzte Abrechnung: ".$datum_obj->formatDatum($this->letztesabrechnungsdatum, 'd.m.Y');
 		$this->log.="\nAbrechnungsdatum: ".$datum_obj->formatDatum($abrechnungsdatum, 'd.m.Y');
 		$this->log.="\nTage gesamt: ".$this->tagegesamt;
 
 		// bereits ausbezahlte Tage berechnen
 		if(!is_null($this->letztesabrechnungsdatum))
-			$this->tageausbezahlt = $this->BerechneGesamttage($startdatum, $this->letztesabrechnungsdatum);
+			$this->tageausbezahlt = $this->BerechneGesamttage($startdatum, $this->letztesabrechnungsdatum, $endedatum);
 		else
 			$this->tageausbezahlt = 0;
 		$this->log.=' / Tage ausbezahlt:'.$this->tageausbezahlt;
 		
 		// noch abzurechnende Tage berechenen
 		if(!is_null($this->letztesabrechnungsdatum))
-			$this->tageabzurechnen = $this->BerechneGesamttage($this->letztesabrechnungsdatum, $abrechnungsdatum)-1;
+		{
+			// 1 Tag dazuzaehlen da ab dem 1. gerechnet wird
+			$letztesabrechnungsdatumplus1 = new DateTime($this->letztesabrechnungsdatum);
+			$letztesabrechnungsdatumplus1->add(new DateInterval('P1D'));
+
+			$this->tageabzurechnen = min(array($this->BerechneGesamttage($letztesabrechnungsdatumplus1->format('Y-m-d'), $abrechnungsdatum, $endedatum),30));
+		}
 		else
-			$this->tageabzurechnen = $this->BerechneGesamttage($startdatum, $abrechnungsdatum);
+			$this->tageabzurechnen = $this->BerechneGesamttage($startdatum, $abrechnungsdatum, $endedatum);
 		$this->log.=' / Tage abzurechnen:'.$this->tageabzurechnen;	
 
 		// Offene Tage berechnen
@@ -273,19 +293,21 @@ class abrechnung extends basis_db
 		$this->honorar_offen = $honorar_offen;
 
 		$honorar_ausbezahlt = $honorar_durchgefuehrt + ($honorar_durchgefuehrt/6);
-		$this->log.="\n\nHonorar ausbezahlt (lfd. Brutto kum. + Sonderzahlung kum.): ".number_format($honorar_ausbezahlt,2);
-		$this->log.="\nHonorar durchgeführt: ".number_format($honorar_durchgefuehrt,2);
+		$this->log.="\n\nHonorar abgerechnet (lfd. Brutto kum. + Sonderzahlung kum.): ".number_format($honorar_ausbezahlt,2);
+		$this->log.="\nHonorar ausbezahlt brutto: ".number_format($honorar_durchgefuehrt,2);
 		$this->log.="\nHonorar offen: ".number_format($honorar_offen,2);
 		$this->log.="\nSonderhonorar: im Gesamthonorar enthalten";
 		$this->log.="\n----------------------------------------------";
 		$this->log.="\nHonorar gesamt: ".number_format($honorar_gesamt,2);
 
-		$this->log.="\n\nAbzug für nicht gehaltene Stunden";
+		$this->log.="\n\nAbzug für nicht gehaltene Stunden:";
 		// Honorar anziehen das bis zu diesem Zeitpunkt nicht gehalten wurde
 		$abzug = $this->loadAnwesenheitsabzug($username, $vertrag_arr, $abrechnungsdatum); 
+		if($abzug==0)
+			$this->log.="\n-> Kein Abzug für Fehlstunden in diesem Zeitraum.";
 		$this->honorar_gesamt -= $abzug;
 		
-		$this->log.="\n= ".number_format($this->honorar_gesamt,2);
+		$this->log.="\nHonorar gesamt nach Abzügen: ".number_format($this->honorar_gesamt,2);
 
 		$this->brutto = ($this->honorar_gesamt - $honorar_ausbezahlt) / $this->tageoffen * $this->tageabzurechnen / 7 * 6;
 		$this->log.="\n\n-> Lfd Brutto ((Honorar gesamt - bisher ausbezahlt) / Tage offen * Tage abzurechnen / 7 * 6): ".number_format($this->brutto,2);
@@ -399,37 +421,72 @@ class abrechnung extends basis_db
 	/**
 	 * Berechnet die Gesamttage die ein Lektor angestellt ist
 	 * ein Monat zaehlt fix 30 Tage
-	 * Wenn ein Lektor am 31. angestellt wird, wird 1 Tag berechnet
+	 * Das erste Monat wird immer bis zum tatsaechlichen Monatsende gerechnet.
 	 *
 	 * @param $startdatum Beginndatum 
 	 * @param $endedatum Endedatum
+	 * @param $vertragsendedatum Datum des Vertragsendes
 	 * @return $gesamttage Anzahl der Tage
 	 */
-	public function BerechneGesamtTage($startdatum, $endedatum)
+	public function BerechneGesamtTage($startdatum, $endedatum, $vertragsendedatum)
 	{
 		$gesamttage=0;
 
 		$datum = new DateTime($startdatum);
 		$ende = new DateTime($endedatum);
 
+		$dtstartdatum = new DateTime($startdatum);
+		$dtendedatum = new DateTime($endedatum);
+		$dtvertragsendedatum = new DateTime($vertragsendedatum);
+
+		// Wenn das Ende des Vertrags erreicht wurde nur bis zu diesem Rechnen
+		if($dtendedatum>$dtvertragsendedatum)
+		{
+			$ende = $dtvertragsendedatum;
+			$dtendedatum = $dtvertragsendedatum;
+		}
+
 		$i=0;
 		while($datum<$ende)
 		{
+			// Tag des letzten Tages im Monat ermitteln
+			$letzterTagimMonat = new DateTime(date('Y-m-t',$datum->getTimestamp()));
+			$letzterTagimMonat = $letzterTagimMonat->format('d');
+
 			$i++;
 			if($i>100)
 				die('Rekursion? Abbruch');
 
 			$tag = $datum->format('d');
-			if($tag==31)
-				$gesamttage+=1;
+
+			if($dtstartdatum->format('m')==$datum->format('m')  && $dtvertragsendedatum->format('m')!=$datum->format('m'))
+			{
+				// 1. Monat
+				// hier wird immer bis zum tatsaechlichen Monatsende gerechnet nicht bis zum 30. zB im Feb. bis 28.
+				$gesamttage+=$letzterTagimMonat-$tag+1;
+			}
+			elseif($dtvertragsendedatum->format('m')==$datum->format('m') && $dtendedatum->format('m')==$datum->format('m'))
+			{
+				// Letzter Monat
+				// hier werden einfach die Tage des Monats dazugerechnet
+				// Das trifft aber nur zu wenn es das Monat des Vertragsendes ist. Ansonsten wird das volle Monat gerechnet
+				// da sonst die berechnung der bereits abgerechneten Tage nicht korrekt ist.
+				$gesamttage+=$dtendedatum->format('d');
+			}
 			else
-				$gesamttage+=31-$tag;
+			{
+				// Zwischenmonat
+				// hier wird immer mit 30 Tagen gerechnet
+				$gesamttage+=30;
+			}
 
 			$datum = new DateTime(date('Y-m-t',$datum->getTimestamp())); // Letzten Tag im Monat
+
 			$datum->add(new DateInterval('P1D')); // 1 Tag dazuzaehlen
 		}
 
 		return $gesamttage;
+
 	}
 
 	/**
@@ -482,9 +539,12 @@ class abrechnung extends basis_db
 			$gesamtsemesterstunden=0;
 			while($row = $this->db_fetch_object($result))
 			{
-				$this->aufteilung[$row->oe_kurzbz]['semesterstunden']=$row->semesterstunden;
-				$this->aufteilung[$row->oe_kurzbz]['kostenstelle_id']=$row->kostenstelle_id;
-				$gesamtsemesterstunden+=$row->semesterstunden;
+				if($row->kostenstelle_id!='')
+				{
+					$this->aufteilung[$row->oe_kurzbz]['semesterstunden']=$row->semesterstunden;
+					$this->aufteilung[$row->oe_kurzbz]['kostenstelle_id']=$row->kostenstelle_id;
+					$gesamtsemesterstunden+=$row->semesterstunden;
+				}
 			}
 
 			foreach($this->aufteilung as $oe=>$row)
@@ -576,6 +636,37 @@ class abrechnung extends basis_db
 	}
 
 	/**
+	 * Liefert die Brutto Summe
+	 */
+	public function getAbrechnungsbrutto($mitarbeiter_uid, $vertragsstart, $vertragsende)
+	{
+		$qry = "SELECT 
+					sum(brutto) as brutto
+				FROM 
+					addon.tbl_abrechnung 
+				WHERE 
+					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)." 
+					AND abrechnungsdatum>=".$this->db_add_param($vertragsstart)."
+					AND abrechnungsdatum<=".$this->db_add_param($vertragsende)."
+					AND kostenstelle_id IS NULL
+					AND abschluss=false";
+
+		if($result = $this->db_query($qry))
+		{
+			if($row = $this->db_fetch_object($result))
+			{
+				return $row->brutto;
+			}
+			else
+			{
+				return 0;
+			}
+		}
+		else
+			return false;
+	}
+
+	/**
 	 * Laedt die Abrechnungen eines Mitarbeiters in einem Studiensemester
 	 * @param mitarbeiter_uid UID des Mitarbeiters
 	 * @param studiensemester_kurzbz Studiensemester
@@ -636,8 +727,8 @@ class abrechnung extends basis_db
 	 */
 	public function abschlussNoetig($mitarbeiter_uid, $abrechnungsdatum, $verwendung_obj)
 	{
-		$gesamttage = $this->BerechneGesamttage($verwendung_obj->beginn, $verwendung_obj->ende);
-		$abgerechnet = $this->BerechneGesamttage($verwendung_obj->beginn, $abrechnungsdatum);
+		$gesamttage = $this->BerechneGesamttage($verwendung_obj->beginn, $verwendung_obj->ende, $verwendung_obj->ende);
+		$abgerechnet = $this->BerechneGesamttage($verwendung_obj->beginn, $abrechnungsdatum, $verwendung_obj->ende);
 		$qry = "SELECT 
 					* 
 				FROM 
@@ -645,7 +736,7 @@ class abrechnung extends basis_db
 				WHERE 
 					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)."
 					AND abrechnungsdatum>=".$this->db_add_param($verwendung_obj->beginn)."
-					AND abrechnungsdatum<=".$this->db_add_param($verwendung_obj->ende)."
+					AND abrechnungsdatum<=".$this->db_add_param($abrechnungsdatum)."
 					AND kostenstelle_id is null";
 
 		$gesamttageabgerechnet=0;
@@ -688,8 +779,17 @@ class abrechnung extends basis_db
 		$this->dv_art = $verwendung_obj->dv_art;
 		$this->mitarbeiter_uid=$mitarbeiter_uid;
 		$this->abrechnungsdatum = $abrechnungsdatum;
-
 		$this->tageabzurechnen=0;
+
+		$vertrag = new vertrag();
+		$vertrag->getVertraege($vertrag_arr);
+		$this->log.="Verträge die abgerechnet werden:";
+		foreach($vertrag->result as $row)
+		{
+			$this->log.="\n -> ".$row->bezeichnung.' - € '.$row->betrag.' (ID '.$row->vertrag_id.')';
+		}
+		$this->log.="\n";
+
 		// Anwesenheiten ermitteln
 		$qry = "SELECT 
 					lehreinheit_id, tbl_lehrveranstaltung.bezeichnung 
@@ -729,30 +829,15 @@ class abrechnung extends basis_db
 		else
 			$anwesenheit_prozent = 0;
 		$this->log.="\nAnwesenheit: $anzahl_anwesend/$anzahl_termine = ".number_format($anwesenheit_prozent,2)." % ";
-		$this->log.="\n".$anwesenheitslog."\n";
-
-		// Berechnung der Zurueckgehaltenen Sonderzahlungen
-		$qry = "SELECT 
-					* 
-				FROM 
-					addon.tbl_abrechnung 
-				WHERE 
-					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)."
-					AND abrechnungsdatum>=".$this->db_add_param($verwendung_obj->beginn)."
-					AND abrechnungsdatum<=".$this->db_add_param($verwendung_obj->ende)."
-					AND kostenstelle_id is null";
-
+		$this->log.="\n".$anwesenheitslog;
+		
 		$gesamttageabgerechnet=0;
 		$abrechnungsdatumfound=0;
 		$honorar_offen=0;
 		$honorar_ausbezahlt=0;
-		if($result = $this->db_query($qry))
-		{
-			while($row = $this->db_fetch_object($result))
-			{
-				$honorar_ausbezahlt += $row->brutto;
-			}
-		}
+
+		// Berechnung der Zurueckgehaltenen Sonderzahlungen
+		$honorar_ausbezahlt = $this->getAbrechnungsbrutto($mitarbeiter_uid, $verwendung_obj->beginn, $verwendung_obj->ende);
 
 		$honorar_offen = $honorar_gesamt - $honorar_ausbezahlt;
 
@@ -765,107 +850,7 @@ class abrechnung extends basis_db
 		$this->log.="\nSaldo: ".number_format($honorar_offen,2);
 
 		$this->brutto = $honorar_offen;	
-		//$this->fiktivmonatsbezug = ($honorar_gesamt - $honorar_ausbezahlt) / 1 * 30/7*6;
-		//$this->log.="\nFiktivmonatsbezug ((Honorar gesamt - bisher ausbezahlt)/ 1 * 30 / 7 * 6): ".number_format($this->fiktivmonatsbezug,2);
-		$this->fiktivmonatsbezug=$honorar_offen;
-		$this->log.="\n !! TODO: pruefen ob korrekt !!: Fiktivmonatbegzug = honorar_offen =  ".number_format($honorar_offen,2);
-
-		// SV Satz berechnen
-		$this->sv_satz = SV_SATZ;
-		$this->log.="\n\nSV-Satz: ".$this->sv_satz." - Abschläge";
-
-		// Alter des Mitarbeiters berechenen
-		$mitarbeiter = new mitarbeiter();
-		if(!$mitarbeiter->load($mitarbeiter_uid))
-		{
-			$this->errormsg = "User Load Failed:".$mitarbeiter->errormsg;
-			return false;
-		}
-
-		$alter = date($abrechnungsdatum);
-		$dt_geburtsdatum = new DateTime($mitarbeiter->gebdatum);
-		$interval = $dt_abrechnungsdatum->diff($dt_geburtsdatum);
-		$alter = $interval->format('d');
-
-		// Altersabschlag	
-		if($alter > $cfg_sv_altersabschlag[0])
-		{
-			$this->log.="\nAlter > ".$cfg_sv_altersabschlag[0].": -".$cfg_sv_altersabschlag[1];
-			$this->sv_satz-=$cfg_sv_altersabschlag[1];
-		}
-
-		// Abschlaege
-		foreach($cfg_sv_abschlaege as $abschlag)
-		{
-			if($this->fiktivmonatsbezug<$abschlag[0])
-			{
-				$this->log.="\nFiktivmonatsbezug < ".$abschlag[0].": -".$abschlag[1];
-				$this->sv_satz-=$abschlag[1];
-				break;
-			}
-		}
-
-		// Wenn DV-Art=200 dann SV-Satz +0.05
-		if($this->dv_art==200)
-		{
-			$this->log.="\nDV-Art=200 : +0.05";
-			$this->sv_satz+=0.05;
-		}
-
-		if($this->fiktivmonatsbezug<SV_GERINGWERTIG)
-		{
-			$this->log.="\nFiktivmonatsbezug < ".SV_GERINGWERTIG.": SV-Satz=0";
-			$this->sv_satz=0;
-		}
-		elseif(11==$dt_abrechnungsdatum->format('m'))
-		{
-			// Im November werden 10 Tage hinzugefuegt wenn nicht geringwertig
-			$this->log.="\nAbrechnungsmonat=11 : Tage abzurechnen + 10";
-			$this->tageabzurechnen+=10;
-		}
-
-		$this->sv_teiler = $this->tageabzurechnen;
-		$this->log.="\n--------------------------------------------------";
-		$this->log.="\n-> SV-Satz:".$this->sv_satz;
-		$this->log.="\n";
-
-		if($this->fiktivmonatsbezug>SV_HOECHSTBEMESSUNGSGRUNDLAGE)
-		{
-			$this->log.="\nFiktivmonatsbezug > ".SV_HOECHSTBEMESSUNGSGRUNDLAGE.": Fiktivmonatsbezug = ".SV_HOECHSTBEMESSUNGSGRUNDLAGE;
-			$this->fiktivmonatsbezug = SV_HOECHSTBEMESSUNGSGRUNDLAGE;
-		}
-
-		$this->sv_lfd = $this->sv_satz * $this->fiktivmonatsbezug / 30 * $this->tageabzurechnen;
-		$this->log.="\nLfd SV (SV-Satz * Fiktivmonatsbezug / 30 * Tage abzurechnen):".number_format($this->sv_lfd,2);
-		$this->log.="\n!! TODO: pruefen ob korrekt !! Tageabzurechnung=0 -> lfdSV=0\n";
-
-		// BMGL Lohnsteuer
-		$this->bmgllst = $this->brutto - $this->sv_lfd;
-		$this->log.="\nBMGL Lst. (Lfd Brutto - Lfd SV): ".number_format($this->bmgllst,2);
-
-		// BMGL Lohnsteuer taeglich
-		$this->bmgllsttgl = $this->bmgllst;//g / $this->tageabzurechnen;
-		$this->log.="\nBMGL Lst. tgl. (BMGL Lst / Tage abzurechnen): ".number_format($this->bmgllsttgl,2);
-
-		// LSt. taeglich:
-		foreach($cfg_lsttgl as $row)
-		{
-			if($this->bmgllsttgl<=$row[0])
-			{
-				$this->log.="\nBMGL Lst. tgl. <=".$row[0]." -> ".$row[1];
-				$this->lst_tgl = $row[1];
-				break;
-			}
-		}
-		$this->log.="\nLst. tgl.:".number_format($this->lst_tgl,2);
-
-		// lfd. LSt.
-		$this->lst_lfd = $this->lst_tgl * $this->tageabzurechnen;
-		$this->log.="\nlfd. Lst. (Lst. tgl. * Tage anzurechnen): ".number_format($this->lst_lfd,2);
-
-		// lfd. NETTO
-		$this->netto = $this->bmgllst - $this->lst_lfd;
-		$this->log.="\nlfd. Netto (BMGL Lst. - lfd. Lst.): ".number_format($this->netto,2);
+		$this->netto = $honorar_offen;
 
 		return true;
 	}

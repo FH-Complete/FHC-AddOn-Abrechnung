@@ -397,7 +397,6 @@ if($username!='')
 					// Nachschauen ob fuer dieses Monat schon eine Abrechnung vorhanden ist
 					if(!$abrechnung->exists($username, $abrechnungsdatum))
 					{
-
 						// Abrechnung vorberechnen
 						if(!$abrechnung->abrechnung($username, $abrechnungsdatum, $gesamtbetrag, $verwendung_obj, $vertrag_arr))
 						{
@@ -454,6 +453,7 @@ if($username!='')
 								</form>
 								';
 						}
+
 						if($abrechnung->abschlussNoetig($username, $abrechnungsdatum, $verwendung_obj))
 						{
 							// Beim Abschluss wird
