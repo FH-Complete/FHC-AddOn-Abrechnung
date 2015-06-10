@@ -547,6 +547,8 @@ class abrechnung extends basis_db
 				}
 			}
 
+			if($gesamtsemesterstunden==0)
+				$gesamtsemesterstunden=1;
 			foreach($this->aufteilung as $oe=>$row)
 			{
 				$anteil = $row['semesterstunden'] / $gesamtsemesterstunden * 100;

@@ -44,6 +44,8 @@ $stsem_obj = new studiensemester();
 
 $abrechnungsmonat = (isset($_REQUEST['abrechnungsmonat'])?$_REQUEST['abrechnungsmonat']:((date('m')-1).'/'.date('Y')));
 
+$sonderzahlung = (isset($_REQUEST['sz'])?true:false);
+
 $jahr = mb_substr($abrechnungsmonat, mb_strpos($abrechnungsmonat,'/')+1);
 $monat = mb_substr($abrechnungsmonat,0,mb_strpos($abrechnungsmonat,'/'));
 $abrechnungsdatum=date('Y-m-t',mktime(0,0,0,$monat,1, $jahr));	
@@ -56,6 +58,10 @@ $qry = "SELECT
 		JOIN public.tbl_mitarbeiter USING(mitarbeiter_uid)
 	WHERE 
 		abrechnungsdatum=".$db->db_add_param($abrechnungsdatum)." AND kostenstelle_id is not null";
+if($sonderzahlung)
+	$qry.=" AND abschluss=true";
+else
+	$qry.=" AND abschluss=false";
 
 if($result = $db->db_query($qry))
 {

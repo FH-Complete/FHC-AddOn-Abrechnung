@@ -99,6 +99,7 @@ echo '<!DOCTYPE html>
 					<a href="#export" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true">Export <span class="caret"></span></a>
 					<ul class="dropdown-menu" role="menu" data-name="data">
 						<li><a href="abrechnung.php?work=csvexport">LV60-Export</a></li>
+						<li><a href="abrechnung.php?work=csvexport&sz">LV60sz-Export</a></li>
 						<li><a href="../../../content/statistik/vertragsuebersicht.xls.php">SV-Export</a></li>
 					</ul>
 				</li>
@@ -186,9 +187,19 @@ if($username=='')
 	}
 	elseif($work=='csvexport')
 	{
-		echo '<h1 class="page-header">CSV Export</h1>
+		if(isset($_GET['sz']))
+			$sonderzahlung=true;
+		else
+			$sonderzahlung=false;
+
+		echo '<h1 class="page-header">CSV Export '.($sonderzahlung?'Sonderzahlung':'').'</h1>
+
 			Bitte wählen Sie das zu exportierende Monat:<br><br>
 		<form action="csvexport.php">';
+
+		if($sonderzahlung)
+			echo '<input type="hidden" name="sz" value="1" />';		
+	
 		printAbrechnungsmonatDropDown();
 		echo '<input type="submit" value="Exportieren" />';
 		echo '</form>';
