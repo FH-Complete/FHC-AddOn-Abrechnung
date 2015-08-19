@@ -31,7 +31,7 @@ class abrechnung extends basis_db
 {
 	public $new=true;
 	public $result = array();
-	
+
 	public $abrechnung_id;		// serial
 	public $mitarbeiter_uid;	// varchar(32)
 	public $kostenstelle_id;	// integer
@@ -47,7 +47,13 @@ class abrechnung extends basis_db
 	public $lst_lfd;			// numeric(12,4)
 	public $abschluss=false;	// boolean
 	public $log;				// text
- 
+	public $tagegesamt;
+	public $tageabzurechnen;
+	public $tageausbezahlt;
+	public $honorar_gesamt;
+	public $bmgllsttgl;
+	public $fiktivmonatsbezug;
+
     /**
 	 * Konstruktor
 	 */
@@ -61,20 +67,22 @@ class abrechnung extends basis_db
 	public function loadMitarbeiterUnabgerechnet()
 	{
 		$qry = "SELECT distinct
-					vorname, nachname, uid, person_id, 
-					(SELECT abrechnungsdatum 
-					 FROM addon.tbl_abrechnung 
-					 WHERE mitarbeiter_uid=tbl_mitarbeiter.mitarbeiter_uid 
+					vorname, nachname, uid, person_id,
+					(SELECT abrechnungsdatum
+					 FROM addon.tbl_abrechnung
+					 WHERE mitarbeiter_uid=tbl_mitarbeiter.mitarbeiter_uid
 					 ORDER BY abrechnungsdatum DESC LIMIT 1) as letzteabrechnung
-				FROM 
+				FROM
 					lehre.tbl_vertrag
 					JOIN public.tbl_person USING(person_id)
 					JOIN public.tbl_benutzer USING(person_id)
 					JOIN public.tbl_mitarbeiter ON(uid=mitarbeiter_uid)
 				WHERE
-					NOT EXISTS (SELECT 1 FROM lehre.tbl_vertrag_vertragsstatus 
-								WHERE vertrag_id=tbl_vertrag.vertrag_id AND vertragsstatus_kurzbz='abgerechnet')";
-	
+					tbl_mitarbeiter.fixangestellt = false
+					AND NOT EXISTS (SELECT 1 FROM lehre.tbl_vertrag_vertragsstatus
+								WHERE vertrag_id=tbl_vertrag.vertrag_id AND vertragsstatus_kurzbz in ('abgerechnet','storno'))
+				ORDER BY nachname, vorname";
+
 		if($result = $this->db_query($qry))
 		{
 			while($row = $this->db_fetch_object($result))
@@ -88,7 +96,7 @@ class abrechnung extends basis_db
 				$this->result[] = $obj;
 			}
 			return true;
-		}	
+		}
 		else
 		{
 			$this->errormsg = 'Fehler beim Laden der Daten';
@@ -104,16 +112,16 @@ class abrechnung extends basis_db
 	 */
 	public function getAbrechnungMitarbeiter($mitarbeiter_uid, $abrechnungsdatum)
 	{
-		$qry = "SELECT 
-					* 
-				FROM 
-					addon.tbl_abrechnung 
-				WHERE 
-					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)." 
+		$qry = "SELECT
+					*
+				FROM
+					addon.tbl_abrechnung
+				WHERE
+					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)."
 					AND abrechnungsdatum=".$this->db_add_param($abrechnungsdatum)."
 					AND kostenstelle_id is null
 					AND abschluss=false
-				ORDER BY 
+				ORDER BY
 					abrechnungsdatum desc LIMIT 1";
 
 		if($result = $this->db_query($qry))
@@ -157,15 +165,15 @@ class abrechnung extends basis_db
 	 */
 	public function getLetzteAbrechnung($mitarbeiter_uid, $startdatum=null)
 	{
-		$qry = "SELECT 
-					* 
-				FROM 
-					addon.tbl_abrechnung 
-				WHERE 
-					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)." 
+		$qry = "SELECT
+					*
+				FROM
+					addon.tbl_abrechnung
+				WHERE
+					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)."
 					AND kostenstelle_id is null
 					AND abrechnungsdatum>".$this->db_add_param($startdatum)."
-				ORDER BY 
+				ORDER BY
 					abrechnungsdatum desc LIMIT 1";
 
 		if($result = $this->db_query($qry))
@@ -213,7 +221,7 @@ class abrechnung extends basis_db
 	 * @param $vertrag_arr Array mit den VertragsIDs die abgerechnet werden
 	 * @return boolean true wenn ok, false im Fehlerfall
 	 */
-	public function abrechnung($username, $abrechnungsdatum, $honorar_gesamt, $verwendung_obj, $vertrag_arr)
+	public function abrechnung($username, $abrechnungsdatum, $verwendung_obj)
 	{
 		// Globale Variablen die im Abrechnungsconfig definiert sind
 		global $cfg_sv_altersabschlag;
@@ -224,12 +232,22 @@ class abrechnung extends basis_db
 
 		$this->log='';
 
+		$mitarbeiter = new mitarbeiter();
+		if(!$mitarbeiter->load($username))
+		{
+			$this->errosmg = 'Fehler beim Laden des Mitabreiters';
+			return false;
+		}
+
 		$vertrag = new vertrag();
-		$vertrag->getVertraege($vertrag_arr);
-		$this->log.="Verträge die abgerechnet werden:";
+		$vertrag->loadVertrag($mitarbeiter->person_id, false);
+		$gesamtbetrag=0;
+		$this->vertrag_arr=array();
 		foreach($vertrag->result as $row)
 		{
 			$this->log.="\n -> ".$row->bezeichnung.' - € '.$row->betrag.' (ID '.$row->vertrag_id.')';
+			$gesamtbetrag+=$row->betrag;
+			$this->vertrag_arr[]=$row->vertrag_id;
 		}
 		$this->log.="\n";
 
@@ -239,7 +257,7 @@ class abrechnung extends basis_db
 		$this->dv_art = $verwendung_obj->dv_art;
 
 		$dt_abrechnungsdatum = new DateTime($abrechnungsdatum);
-		$this->honorar_gesamt = $honorar_gesamt;
+		$this->honorar_gesamt = $gesamtbetrag;
 		$this->abrechnungsdatum = $abrechnungsdatum;
 
 		// Letzte Abrechnung laden
@@ -269,7 +287,7 @@ class abrechnung extends basis_db
 		else
 			$this->tageausbezahlt = 0;
 		$this->log.=' / Tage ausbezahlt:'.$this->tageausbezahlt;
-		
+
 		// noch abzurechnende Tage berechenen
 		if(!is_null($this->letztesabrechnungsdatum))
 		{
@@ -281,13 +299,13 @@ class abrechnung extends basis_db
 		}
 		else
 			$this->tageabzurechnen = $this->BerechneGesamttage($startdatum, $abrechnungsdatum, $endedatum);
-		$this->log.=' / Tage abzurechnen:'.$this->tageabzurechnen;	
+		$this->log.=' / Tage abzurechnen:'.$this->tageabzurechnen;
 
 		// Offene Tage berechnen
 		$this->tageoffen = $this->tagegesamt - $this->tageausbezahlt;
 		$this->log.=' / Tage offen:'.$this->tageoffen;
 
-		$honorar_offen = $honorar_gesamt - $honorar_durchgefuehrt;
+		$honorar_offen = $this->honorar_gesamt - $honorar_durchgefuehrt;
 
 		$this->honorar_dgf=$honorar_durchgefuehrt;
 		$this->honorar_offen = $honorar_offen;
@@ -298,25 +316,31 @@ class abrechnung extends basis_db
 		$this->log.="\nHonorar offen: ".number_format($honorar_offen,2);
 		$this->log.="\nSonderhonorar: im Gesamthonorar enthalten";
 		$this->log.="\n----------------------------------------------";
-		$this->log.="\nHonorar gesamt: ".number_format($honorar_gesamt,2);
+		$this->log.="\nHonorar gesamt: ".number_format($this->honorar_gesamt,2);
 
 		$this->log.="\n\nAbzug für nicht gehaltene Stunden:";
 		// Honorar anziehen das bis zu diesem Zeitpunkt nicht gehalten wurde
-		$abzug = $this->loadAnwesenheitsabzug($username, $vertrag_arr, $abrechnungsdatum); 
+		$abzug = $this->loadAnwesenheitsabzug($username, $this->vertrag_arr, $abrechnungsdatum);
 		if($abzug==0)
 			$this->log.="\n-> Kein Abzug für Fehlstunden in diesem Zeitraum.";
 		$this->honorar_gesamt -= $abzug;
-		
+
 		$this->log.="\nHonorar gesamt nach Abzügen: ".number_format($this->honorar_gesamt,2);
 
-		$this->brutto = ($this->honorar_gesamt - $honorar_ausbezahlt) / $this->tageoffen * $this->tageabzurechnen / 7 * 6;
+		if($this->tageoffen==0)
+			$this->log.="\n\n Tage offen=0 -> Berechnung des Bruttobetrag nicht möglich!";
+		else
+			$this->brutto = ($this->honorar_gesamt - $honorar_ausbezahlt) / $this->tageoffen * $this->tageabzurechnen / 7 * 6;
 		$this->log.="\n\n-> Lfd Brutto ((Honorar gesamt - bisher ausbezahlt) / Tage offen * Tage abzurechnen / 7 * 6): ".number_format($this->brutto,2);
 
 		// Monatssechstel wird einbehalten und erst am Semesterende ausbezahlt
 		$this->sonderzahlung = $this->brutto / 6;
 		$this->log.="\n-> Sonderzahlung (Lfd Brutto / 6): ".number_format($this->sonderzahlung,2);
 
-		$this->fiktivmonatsbezug = ($this->honorar_gesamt - $honorar_ausbezahlt) / $this->tageoffen * 30/7*6;
+		if($this->tageoffen==0)
+			$this->log.="\n\n Tage offen=0 -> Berechnung des fiktivmonatsbezug nicht möglich!";
+		else
+			$this->fiktivmonatsbezug = ($this->honorar_gesamt - $honorar_ausbezahlt) / $this->tageoffen * 30/7*6;
 		$this->log.="\n-> Fiktivmonatsbezug ((Honorar gesamt - bisher ausbezahlt)/ Tage offen * 30 / 7 * 6): ".number_format($this->fiktivmonatsbezug,2);
 
 		// SV Satz berechnen
@@ -336,7 +360,7 @@ class abrechnung extends basis_db
 		$interval = $dt_abrechnungsdatum->diff($dt_geburtsdatum);
 		$alter = $interval->format('d');
 
-		// Altersabschlag	
+		// Altersabschlag
 		if($alter > $cfg_sv_altersabschlag[0])
 		{
 			$this->log.="\nAlter > ".$cfg_sv_altersabschlag[0].": -".$cfg_sv_altersabschlag[1];
@@ -392,8 +416,13 @@ class abrechnung extends basis_db
 		$this->log.="\nBMGL Lst. (Lfd Brutto - Lfd SV): ".number_format($this->bmgllst,2);
 
 		// BMGL Lohnsteuer taeglich
-		$this->bmgllsttgl = $this->bmgllst / $this->tageabzurechnen;
-		$this->log.="\nBMGL Lst. tgl. (BMGL Lst / Tage abzurechnen): ".number_format($this->bmgllsttgl,2);
+		if($this->tageabzurechnen!=0)
+		{
+			$this->bmgllsttgl = $this->bmgllst / $this->tageabzurechnen;
+			$this->log.="\nBMGL Lst. tgl. (BMGL Lst / Tage abzurechnen): ".number_format($this->bmgllsttgl,2);
+		}
+		else
+			$this->log.="\nTage abzurechnen = 0!! BMGL Lst. tgl. kann nicht berechnet werden";
 
 		// LSt. taeglich:
 		foreach($cfg_lsttgl as $row)
@@ -423,7 +452,7 @@ class abrechnung extends basis_db
 	 * ein Monat zaehlt fix 30 Tage
 	 * Das erste Monat wird immer bis zum tatsaechlichen Monatsende gerechnet.
 	 *
-	 * @param $startdatum Beginndatum 
+	 * @param $startdatum Beginndatum
 	 * @param $endedatum Endedatum
 	 * @param $vertragsendedatum Datum des Vertragsendes
 	 * @return $gesamttage Anzahl der Tage
@@ -455,7 +484,7 @@ class abrechnung extends basis_db
 
 			$i++;
 			if($i>100)
-				die('Rekursion? Abbruch');
+				die('Abbruch beim Berechnen der Tage aufgrund Endlosschleife: Start:'.$startdatum.', Ende:'.$endedatum.', Vertragsende:'.$vertragsendedatum);
 
 			$tag = $datum->format('d');
 
@@ -497,12 +526,12 @@ class abrechnung extends basis_db
 	 */
 	public function exists($username, $abrechnungsdatum)
 	{
-		$qry = "SELECT 
-					1 
-				FROM 
-					addon.tbl_abrechnung 
-				WHERE 
-					mitarbeiter_uid=".$this->db_add_param($username)." 
+		$qry = "SELECT
+					1
+				FROM
+					addon.tbl_abrechnung
+				WHERE
+					mitarbeiter_uid=".$this->db_add_param($username)."
 					AND abrechnungsdatum=".$this->db_add_param($abrechnungsdatum);
 
 		if($result = $this->db_query($qry))
@@ -519,11 +548,11 @@ class abrechnung extends basis_db
 	 * Auf die Kostenstellen wird nicht der ausbezahlt Betrag gebucht sondern der Anteil der
 	 * bereits gehalten wurden. Sonderhonorare werden zur gaenze in betreffenden Monat verbucht
 	 */
-	public function loadVertragsAufteilung($vertrag_arr, $abrechnungsmonat)
+	public function loadVertragsAufteilung()
 	{
 		$this->aufteilung=array();
 
-		$qry = "SELECT 
+		$qry = "SELECT
 					sum(tbl_lehreinheitmitarbeiter.semesterstunden) as semesterstunden, lehrfach.oe_kurzbz,
 					(SELECT kostenstelle_id FROM wawi.tbl_kostenstelle WHERE oe_kurzbz=lehrfach.oe_kurzbz AND aktiv LIMIT 1) as kostenstelle_id
 				FROM
@@ -531,7 +560,7 @@ class abrechnung extends basis_db
 					JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
 					JOIN lehre.tbl_lehrveranstaltung lehrfach ON(tbl_lehreinheit.lehrfach_id=lehrfach.lehrveranstaltung_id)
 				WHERE
-					tbl_lehreinheitmitarbeiter.vertrag_id IN(".$this->db_implode4SQL($vertrag_arr).")
+					tbl_lehreinheitmitarbeiter.vertrag_id IN(".$this->db_implode4SQL($this->vertrag_arr).")
 				GROUP BY lehrfach.oe_kurzbz";
 
 		if($result = $this->db_query($qry))
@@ -559,7 +588,7 @@ class abrechnung extends basis_db
 
 	/**
 	 * Laedt das Konto eines Mitarbeiters
-	 * 
+	 *
 	 * @return true wenn erfolgreich
 	 * @return false im Fehlerfall
 	 */
@@ -590,8 +619,8 @@ class abrechnung extends basis_db
 		if(!$this->loadMitarbeiterKonto())
 			return false;
 
-		$qry = "BEGIN;INSERT INTO addon.tbl_abrechnung(mitarbeiter_uid, kostenstelle_id, konto_id, abrechnungsdatum, 	
-				sv_lfd, sv_satz, sv_teiler, honorar_dgf, honorar_offen, brutto, netto, 
+		$qry = "BEGIN;INSERT INTO addon.tbl_abrechnung(mitarbeiter_uid, kostenstelle_id, konto_id, abrechnungsdatum,
+				sv_lfd, sv_satz, sv_teiler, honorar_dgf, honorar_offen, brutto, netto,
 				lst_lfd, log, abschluss) VALUES(".
 				$this->db_add_param($this->mitarbeiter_uid).',null,'.
 				$this->db_add_param($this->konto_id).','.
@@ -611,7 +640,7 @@ class abrechnung extends basis_db
 		{
 			$prozent = $row['prozent'];
 
-			$qry.= "INSERT INTO addon.tbl_abrechnung(mitarbeiter_uid, kostenstelle_id, konto_id, abrechnungsdatum, 	
+			$qry.= "INSERT INTO addon.tbl_abrechnung(mitarbeiter_uid, kostenstelle_id, konto_id, abrechnungsdatum,
 				sv_lfd, sv_satz, sv_teiler, honorar_dgf, honorar_offen, brutto, netto, lst_lfd, abschluss) VALUES(".
 				$this->db_add_param($this->mitarbeiter_uid).','.
 				$this->db_add_param($row['kostenstelle_id']).','.
@@ -642,12 +671,12 @@ class abrechnung extends basis_db
 	 */
 	public function getAbrechnungsbrutto($mitarbeiter_uid, $vertragsstart, $vertragsende)
 	{
-		$qry = "SELECT 
+		$qry = "SELECT
 					sum(brutto) as brutto
-				FROM 
-					addon.tbl_abrechnung 
-				WHERE 
-					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)." 
+				FROM
+					addon.tbl_abrechnung
+				WHERE
+					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)."
 					AND abrechnungsdatum>=".$this->db_add_param($vertragsstart)."
 					AND abrechnungsdatum<=".$this->db_add_param($vertragsende)."
 					AND kostenstelle_id IS NULL
@@ -676,12 +705,12 @@ class abrechnung extends basis_db
 	 */
 	public function getAbrechnungen($mitarbeiter_uid, $studiensemester_kurzbz)
 	{
-		$qry = "SELECT 
-					* 
-				FROM 
-					addon.tbl_abrechnung 
-				WHERE 
-					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)." 
+		$qry = "SELECT
+					*
+				FROM
+					addon.tbl_abrechnung
+				WHERE
+					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)."
 					AND abrechnungsdatum>=(SELECT start FROM public.tbl_studiensemester WHERE studiensemester_kurzbz=".$this->db_add_param($studiensemester_kurzbz).")
 					AND abrechnungsdatum<=(SELECT ende FROM public.tbl_studiensemester WHERE studiensemester_kurzbz=".$this->db_add_param($studiensemester_kurzbz).")";
 
@@ -691,7 +720,7 @@ class abrechnung extends basis_db
 			{
 
 				$obj = new stdClass();
-			
+
 				$obj->abrechnung_id = $row->abrechnung_id;
 				$obj->mitarbeiter_uid = $row->mitarbeiter_uid;
 				$obj->kostenstelle_id = $row->kostenstelle_id;
@@ -731,11 +760,11 @@ class abrechnung extends basis_db
 	{
 		$gesamttage = $this->BerechneGesamttage($verwendung_obj->beginn, $verwendung_obj->ende, $verwendung_obj->ende);
 		$abgerechnet = $this->BerechneGesamttage($verwendung_obj->beginn, $abrechnungsdatum, $verwendung_obj->ende);
-		$qry = "SELECT 
-					* 
-				FROM 
-					addon.tbl_abrechnung 
-				WHERE 
+		$qry = "SELECT
+					*
+				FROM
+					addon.tbl_abrechnung
+				WHERE
 					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)."
 					AND abrechnungsdatum>=".$this->db_add_param($verwendung_obj->beginn)."
 					AND abrechnungsdatum<=".$this->db_add_param($abrechnungsdatum)."
@@ -758,20 +787,20 @@ class abrechnung extends basis_db
 		else
 			return false;
 	}
-	
+
 	/**
 	 * Fuehrt eine Abschlussabrechnung durch
-	 * 
+	 *
 	 * @param $mitarbeiter_uid UID des Mitarbeiters
 	 * @param $abrechnugnsdatum Monat der Abrechnung
 	 * @param $honorar_gesamt Gesamthonorar des Lektors in diesem Semester
 	 * @param $verwendung_obj
 	 * @param $vertrag_arr Array mit IDs zu den Vertraegen dei abgerechnet werden muessen
-	 * 
+	 *
 	 * @return true wenn erfolgreich
 	 * @return false im Fehlerfall
 	 */
-	public function abschluss($mitarbeiter_uid, $abrechnungsdatum, $honorar_gesamt, $verwendung_obj, $vertrag_arr)
+	public function abschluss($mitarbeiter_uid, $abrechnungsdatum, $verwendung_obj)
 	{
 		global $cfg_sv_altersabschlag, $cfg_sv_abschlaege, $cfg_lsttgl;
 		$this->abschluss=true;
@@ -783,23 +812,37 @@ class abrechnung extends basis_db
 		$this->abrechnungsdatum = $abrechnungsdatum;
 		$this->tageabzurechnen=0;
 
+
+		$mitarbeiter = new mitarbeiter();
+		if(!$mitarbeiter->load($mitarbeiter_uid))
+		{
+			$this->errosmg = 'Fehler beim Laden des Mitabreiters';
+			return false;
+		}
+
 		$vertrag = new vertrag();
-		$vertrag->getVertraege($vertrag_arr);
+		$vertrag->loadVertrag($mitarbeiter->person_id, false);
+		$gesamtbetrag=0;
+		$this->vertrag_arr=array();
 		$this->log.="Verträge die abgerechnet werden:";
+
 		foreach($vertrag->result as $row)
 		{
 			$this->log.="\n -> ".$row->bezeichnung.' - € '.$row->betrag.' (ID '.$row->vertrag_id.')';
+			$gesamtbetrag+=$row->betrag;
+			$this->vertrag_arr[]=$row->vertrag_id;
 		}
+
 		$this->log.="\n";
 
 		// Anwesenheiten ermitteln
-		$qry = "SELECT 
-					lehreinheit_id, tbl_lehrveranstaltung.bezeichnung 
-				FROM 
-					lehre.tbl_lehreinheitmitarbeiter 
+		$qry = "SELECT
+					lehreinheit_id, tbl_lehrveranstaltung.bezeichnung
+				FROM
+					lehre.tbl_lehreinheitmitarbeiter
 					JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
 					JOIN lehre.tbl_lehrveranstaltung USING(lehrveranstaltung_id)
-				WHERE vertrag_id in(".$this->db_implode4SQL($vertrag_arr).")";
+				WHERE vertrag_id in(".$this->db_implode4SQL($this->vertrag_arr).")";
 
 		$anzahl_termine=0;
 		$anzahl_anwesend=0;
@@ -809,7 +852,7 @@ class abrechnung extends basis_db
 
 		if($result = $this->db_query($qry))
 		{
-			while($row = $this->db_fetch_object($result))	
+			while($row = $this->db_fetch_object($result))
 			{
 				$anwesenheit = new anwesenheit();
 				$anwesenheit->loadAnwesenheitMitarbeiter($mitarbeiter_uid, $row->lehreinheit_id);
@@ -832,7 +875,7 @@ class abrechnung extends basis_db
 			$anwesenheit_prozent = 0;
 		$this->log.="\nAnwesenheit: $anzahl_anwesend/$anzahl_termine = ".number_format($anwesenheit_prozent,2)." % ";
 		$this->log.="\n".$anwesenheitslog;
-		
+
 		$gesamttageabgerechnet=0;
 		$abrechnungsdatumfound=0;
 		$honorar_offen=0;
@@ -841,9 +884,9 @@ class abrechnung extends basis_db
 		// Berechnung der Zurueckgehaltenen Sonderzahlungen
 		$honorar_ausbezahlt = $this->getAbrechnungsbrutto($mitarbeiter_uid, $verwendung_obj->beginn, $verwendung_obj->ende);
 
-		$honorar_offen = $honorar_gesamt - $honorar_ausbezahlt;
+		$honorar_offen = $this->honorar_gesamt - $honorar_ausbezahlt;
 
-		$this->log.="\nHonorar gesamt: ".number_format($honorar_gesamt,2);
+		$this->log.="\nHonorar gesamt: ".number_format($this->honorar_gesamt,2);
 		$this->log.="\nHonorar ausbezahlt: ".number_format($honorar_ausbezahlt,2);
 		$this->log.="\nHonorar offen: ".number_format($honorar_offen,2);
 		$this->log.="\nAbzug für nicht anwesende Stunden: ".number_format($anwesenheitsabzug,2);
@@ -851,7 +894,7 @@ class abrechnung extends basis_db
 		$honorar_offen = $honorar_offen - $anwesenheitsabzug;
 		$this->log.="\nSaldo: ".number_format($honorar_offen,2);
 
-		$this->brutto = $honorar_offen;	
+		$this->brutto = $honorar_offen;
 		$this->netto = $honorar_offen;
 
 		return true;
@@ -859,7 +902,7 @@ class abrechnung extends basis_db
 
 	/**
 	 * Prueft ob eine Abrechnung die letzte vorhandene ist
-	 * 
+	 *
 	 * @param $mitarbeiter_uid UID des Mitarbeiters
 	 * @param $abrechnungsdatum Datum der Abrechnung
 	 * @return true wenn es die letzte abrechnung ist
@@ -867,12 +910,12 @@ class abrechnung extends basis_db
 	 */
 	public function isletzteAbrechnung($mitarbeiter_uid, $abrechnungsdatum)
 	{
-		$qry = "SELECT 
-					1 
-				FROM 
-					addon.tbl_abrechnung 
-				WHERE 
-					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)." 
+		$qry = "SELECT
+					1
+				FROM
+					addon.tbl_abrechnung
+				WHERE
+					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)."
 					AND abrechnungsdatum>".$this->db_add_param($abrechnungsdatum);
 		if($result = $this->db_query($qry))
 		{
@@ -887,7 +930,7 @@ class abrechnung extends basis_db
 			return false;
 		}
 	}
-	
+
 	/**
 	 * Loescht die Abrechnung eines Mitarbeiters
 	 *
@@ -897,13 +940,13 @@ class abrechnung extends basis_db
 	 */
 	public function deleteAbrechnung($mitarbeiter_uid, $abrechnungsdatum)
 	{
-		$qry = "DELETE FROM addon.tbl_abrechnung 
-				WHERE 
-					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)." 
+		$qry = "DELETE FROM addon.tbl_abrechnung
+				WHERE
+					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)."
 					AND abrechnungsdatum=".$this->db_add_param($abrechnungsdatum);
-					
+
 		//TODO Buchung mit Mitarbeiter entfernen
-		
+
 		if($this->db_query($qry))
 			return true;
 		else
@@ -913,7 +956,7 @@ class abrechnung extends basis_db
 		}
 	}
 
-	
+
 	/**
 	 * Berechnet den Abzug des Gesamthonorars aufgrund der Stunden die der Lektor nicht anwesend war
 	 * @param $username UID des Mitabreiters
@@ -925,9 +968,9 @@ class abrechnung extends basis_db
 	{
 		if(count($vertrag_arr)==0)
 			return false;
-		$qry = "SELECT lehreinheit_id, tbl_lehrveranstaltung.bezeichnung 
-				FROM 
-					lehre.tbl_lehreinheit 
+		$qry = "SELECT lehreinheit_id, tbl_lehrveranstaltung.bezeichnung
+				FROM
+					lehre.tbl_lehreinheit
 					JOIN lehre.tbl_lehrveranstaltung USING(lehrveranstaltung_id)
 					JOIN lehre.tbl_lehreinheitmitarbeiter USING(lehreinheit_id)
 				WHERE
@@ -940,7 +983,7 @@ class abrechnung extends basis_db
 			{
 				$anwesenheit = new anwesenheit();
 				$anwesenheit->loadAnwesenheitMitarbeiter($username, $row->lehreinheit_id);
-
+				
 				foreach($anwesenheit->anwesenheit as $anw)
 				{
 					if($anw['datum']<=$abrechnungsdatum && $anw['anwesend']==false)
@@ -958,7 +1001,7 @@ class abrechnung extends basis_db
 
 	/**
 	 * Prueft ob eine Abrechnung die letzte vorhandene ist
-	 * 
+	 *
 	 * @param $mitarbeiter_uid UID des Mitarbeiters
 	 * @param $abrechnungsdatum Datum der Abrechnung
 	 * @return true wenn es die letzte abrechnung ist
@@ -966,12 +1009,12 @@ class abrechnung extends basis_db
 	 */
 	public function loadAbschluss($mitarbeiter_uid, $abrechnungsdatum)
 	{
-		$qry = "SELECT 
+		$qry = "SELECT
 					*
-				FROM 
-					addon.tbl_abrechnung 
-				WHERE 
-					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)." 
+				FROM
+					addon.tbl_abrechnung
+				WHERE
+					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)."
 					AND abrechnungsdatum=".$this->db_add_param($abrechnungsdatum)."
 					AND abschluss=true
 					AND kostenstelle_id is null";
