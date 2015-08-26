@@ -78,6 +78,7 @@ echo '<!DOCTYPE html>
 	<link rel="stylesheet" href="../../../skin/tablesort.css" type="text/css">
 	<script type="text/javascript" src="../../../include/js/jquery1.9.min.js"></script>
 	<link rel="stylesheet" type="text/css" href="../../../skin/jquery-ui-1.9.2.custom.min.css"/>
+	<link href="../skin/abrechnung.css" rel="stylesheet">
 	<script src="../include/js/bootstrap.min.js"></script>
 	<title>Abrechnung</title>
 </head>

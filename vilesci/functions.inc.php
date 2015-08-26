@@ -707,25 +707,41 @@ function showNochNichtAbgerechnet($abrechnungsmonat)
 		echo '<td>'.$db->convert_html_chars($row->nachname).'</td>';
 		echo '<td>'.$datum_obj->formatDatum($row->letzteabrechnung,'d.m.Y').'</td>';
 
+
 		$abrechnung_detail = new abrechnung();
 		if(($verwendung_obj = getVerwendung($row->uid, $abrechnungsdatum))!==false)
 		{
-			$abrechnung_detail->abrechnung($row->uid, $abrechnungsdatum, $verwendung_obj);
-
 			echo '<td align="center">'.$datum_obj->formatDatum($verwendung_obj->beginn,'d.m.Y').'</td>';
 			echo '<td align="center">'.$datum_obj->formatDatum($verwendung_obj->ende,'d.m.Y').'</td>';
 
-			echo '<td align="right">'.$db->convert_html_chars(number_format($abrechnung_detail->brutto,2,',','.')).'</td>';
-			echo '<td align="center">'.$db->convert_html_chars($abrechnung_detail->tageabzurechnen).'</td>';
-			echo '<td align="center">'.$db->convert_html_chars($abrechnung_detail->tageausbezahlt).'</td>';
-			echo '<td align="right">'.$db->convert_html_chars(number_format($abrechnung_detail->honorar_gesamt,2,',','.')).'</td>';
-			echo '<td align="right">'.$db->convert_html_chars(number_format($abrechnung_detail->honorar_dgf,2,',','.')).'</td>';
-			echo '<td align="right">'.$db->convert_html_chars(number_format($abrechnung_detail->honorar_offen,2,',','.')).'</td>';
+			if($abrechnungsdatum>$row->letzteabrechnung)
+			{
+				$abrechnung_detail->abrechnung($row->uid, $abrechnungsdatum, $verwendung_obj);
+
+				echo '<td align="right">'.$db->convert_html_chars(number_format($abrechnung_detail->brutto,2,',','.')).'</td>';
+				echo '<td align="center">'.$db->convert_html_chars($abrechnung_detail->tageabzurechnen).'</td>';
+				echo '<td align="center">'.$db->convert_html_chars($abrechnung_detail->tageausbezahlt).'</td>';
+				echo '<td align="right">'.$db->convert_html_chars(number_format($abrechnung_detail->honorar_gesamt,2,',','.')).'</td>';
+				echo '<td align="right">'.$db->convert_html_chars(number_format($abrechnung_detail->honorar_dgf,2,',','.')).'</td>';
+				echo '<td align="right">'.$db->convert_html_chars(number_format($abrechnung_detail->honorar_offen,2,',','.')).'</td>';
+			}
+			else
+			{
+				$abrechnung_detail->getAbrechnungMitarbeiter($row->uid,$abrechnungsdatum);
+
+				echo '<td align="right" class="bereitsabgerechnet">'.$db->convert_html_chars(number_format($abrechnung_detail->brutto,2,',','.')).'</td>';
+				echo '<td align="center" class="bereitsabgerechnet">'.$db->convert_html_chars($abrechnung_detail->sv_teiler).'</td>';
+				echo '<td align="center" class="bereitsabgerechnet"></td>';
+				echo '<td align="right" class="bereitsabgerechnet">'.$db->convert_html_chars(number_format(($abrechnung_detail->honorar_dgf+$abrechnung_detail->honorar_offen),2,',','.')).'</td>';
+				echo '<td align="right" class="bereitsabgerechnet">'.$db->convert_html_chars(number_format($abrechnung_detail->honorar_dgf,2,',','.')).'</td>';
+				echo '<td align="right" class="bereitsabgerechnet">'.$db->convert_html_chars(number_format($abrechnung_detail->honorar_offen,2,',','.')).'</td>';
+			}
 		}
 		else
 		{
 			echo '<td colspan="8">Keine gütlige Verwendung für dieses Monat</td>';
 		}
+
 		echo '</tr>';
 	}
 	echo '</tbody>
