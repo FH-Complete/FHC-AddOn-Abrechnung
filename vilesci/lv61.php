@@ -91,7 +91,7 @@ if($result = $db->db_query($qry))
 		'dv', // dv_art 19 / 401
 		'BIC', // BIC
 		'IBAN', // IBAN
-		'bank', // Name der Bank
+		//'bank', // Name der Bank
 		'gkk',  // ?? immer 0
 		'kobef',// ?? immer 1
 		'ubahn', // ?? immer 0
@@ -113,8 +113,8 @@ if($result = $db->db_query($qry))
 				KUNDENNUMMER, $row->personalnummer,'0', $row->nachname, $row->vorname,
 				$row->titelpre,	'Lektor', $row->svnr, $adresse->strasse, $adresse->plz, $adresse->ort,
 				($row->geschlecht=='m'?1:2), $datum_obj->formatDatum($row->beginn,'Ymd'),
-				$datum_obj->formatDatum($row->ende,'Ymd'), '', 'G', $row->dv_art,
-				$bankverbindung->bic, $bankverbindung->iban, $bankverbindung->name,
+				'', '', 'G', $row->dv_art,
+				$bankverbindung->bic, $bankverbindung->iban,
 				'0','1','0','0','2','2'
 			),';');
 	}
