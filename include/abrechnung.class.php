@@ -59,6 +59,7 @@ class abrechnung extends basis_db
 	 */
 	public function __construct()
 	{
+		parent::__construct();
 	}
 
 	/**
@@ -476,7 +477,9 @@ class abrechnung extends basis_db
 		}
 
 		$i=0;
-		while($datum<$ende)
+
+
+		while($datum<$ende || $datum->format('d')==31)
 		{
 			// Tag des letzten Tages im Monat ermitteln
 			$letzterTagimMonat = new DateTime(date('Y-m-t',$datum->getTimestamp()));
@@ -500,7 +503,10 @@ class abrechnung extends basis_db
 				// hier werden einfach die Tage des Monats dazugerechnet
 				// Das trifft aber nur zu wenn es das Monat des Vertragsendes ist. Ansonsten wird das volle Monat gerechnet
 				// da sonst die berechnung der bereits abgerechneten Tage nicht korrekt ist.
-				$gesamttage+=$dtendedatum->format('d');
+				if($dtendedatum->format('d')>30)
+					$gesamttage+=30;
+				else
+					$gesamttage+=$dtendedatum->format('d');
 			}
 			else
 			{
@@ -513,7 +519,6 @@ class abrechnung extends basis_db
 
 			$datum->add(new DateInterval('P1D')); // 1 Tag dazuzaehlen
 		}
-
 		return $gesamttage;
 
 	}
@@ -552,35 +557,51 @@ class abrechnung extends basis_db
 	{
 		$this->aufteilung=array();
 
-		$qry = "SELECT
-					sum(tbl_lehreinheitmitarbeiter.semesterstunden) as semesterstunden, lehrfach.oe_kurzbz,
-					(SELECT kostenstelle_id FROM wawi.tbl_kostenstelle WHERE oe_kurzbz=lehrfach.oe_kurzbz AND aktiv LIMIT 1) as kostenstelle_id
+		$qry = "SELECT sum(betrag) as betrag, oe_kurzbz, kostenstelle_id FROM
+				(
+				SELECT
+					sum(betrag) as betrag, tbl_studiengang.oe_kurzbz,
+					(SELECT kostenstelle_id FROM addon.tbl_abrechnung_kostenstelle WHERE studiengang_kz=tbl_lehrveranstaltung.studiengang_kz AND (sprache=tbl_lehrveranstaltung.sprache OR sprache is null) AND (orgform_kurzbz=tbl_lehrveranstaltung.orgform_kurzbz OR orgform_kurzbz is null) ORDER BY sprache NULLS LAST, orgform_kurzbz NULLS LAST limit 1) as kostenstelle_id
 				FROM
 					lehre.tbl_lehreinheitmitarbeiter
 					JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
-					JOIN lehre.tbl_lehrveranstaltung lehrfach ON(tbl_lehreinheit.lehrfach_id=lehrfach.lehrveranstaltung_id)
+					JOIN lehre.tbl_lehrveranstaltung USING(lehrveranstaltung_id)
+					JOIN public.tbl_studiengang USING(studiengang_kz)
+					JOIN lehre.tbl_vertrag ON(tbl_lehreinheitmitarbeiter.vertrag_id=tbl_vertrag.vertrag_id)
 				WHERE
 					tbl_lehreinheitmitarbeiter.vertrag_id IN(".$this->db_implode4SQL($this->vertrag_arr).")
-				GROUP BY lehrfach.oe_kurzbz";
+				GROUP BY tbl_studiengang.oe_kurzbz, tbl_lehrveranstaltung.sprache, tbl_lehrveranstaltung.orgform_kurzbz, tbl_lehrveranstaltung.studiengang_kz
+				UNION
+				SELECT
+					sum(betrag) as betrag, tbl_studiengang.oe_kurzbz,
+					(SELECT kostenstelle_id FROM addon.tbl_abrechnung_kostenstelle WHERE studiengang_kz=tbl_lehrveranstaltung.studiengang_kz AND (sprache=tbl_lehrveranstaltung.sprache OR sprache is null) AND (orgform_kurzbz=tbl_lehrveranstaltung.orgform_kurzbz OR orgform_kurzbz is null) ORDER BY sprache NULLS LAST, orgform_kurzbz NULLS LAST limit 1) as kostenstelle_id
+				FROM
+					lehre.tbl_vertrag
+					JOIN lehre.tbl_lehrveranstaltung USING(lehrveranstaltung_id)
+					JOIN public.tbl_studiengang USING(studiengang_kz)
+				WHERE
+					vertrag_id IN(".$this->db_implode4SQL($this->vertrag_arr).")
+				GROUP BY tbl_studiengang.oe_kurzbz, tbl_lehrveranstaltung.sprache, tbl_lehrveranstaltung.orgform_kurzbz, tbl_lehrveranstaltung.studiengang_kz
+				) a group by oe_kurzbz, a.kostenstelle_id";
 
 		if($result = $this->db_query($qry))
 		{
-			$gesamtsemesterstunden=0;
+			$gesamtbetrag=0;
 			while($row = $this->db_fetch_object($result))
 			{
 				if($row->kostenstelle_id!='')
 				{
-					$this->aufteilung[$row->oe_kurzbz]['semesterstunden']=$row->semesterstunden;
-					$this->aufteilung[$row->oe_kurzbz]['kostenstelle_id']=$row->kostenstelle_id;
-					$gesamtsemesterstunden+=$row->semesterstunden;
+					$this->aufteilung[$row->studiengang_kz]['betrag']=$row->betrag;
+					$this->aufteilung[$row->studiengang_kz]['kostenstelle_id']=$row->kostenstelle_id;
+					$gesamtbetrag+=$row->betrag;
 				}
 			}
 
-			if($gesamtsemesterstunden==0)
-				$gesamtsemesterstunden=1;
+			if($gesamtbetrag==0)
+				$gesamtbetrag=1;
 			foreach($this->aufteilung as $oe=>$row)
 			{
-				$anteil = $row['semesterstunden'] / $gesamtsemesterstunden * 100;
+				$anteil = $row['betrag'] / $gesamtbetrag * 100;
 				$this->aufteilung[$oe]['prozent']=$anteil;
 			}
 		}
@@ -983,7 +1004,7 @@ class abrechnung extends basis_db
 			{
 				$anwesenheit = new anwesenheit();
 				$anwesenheit->loadAnwesenheitMitarbeiter($username, $row->lehreinheit_id);
-				
+
 				foreach($anwesenheit->anwesenheit as $anw)
 				{
 					if($anw['datum']<=$abrechnungsdatum && $anw['anwesend']==false)
@@ -1052,5 +1073,111 @@ class abrechnung extends basis_db
 			return false;
 		}
 	}
+
+	/**
+	 * Laedt die Abrechnung zu einem Abrechnungsdatum
+	 * @param abrechnugsdatum
+	 * @return boolean true wenn ok, false im Fehlerfall
+	 */
+	public function getAbrechnungenDatum($abrechnungsdatum)
+	{
+		$qry = "SELECT
+					*
+				FROM
+					addon.tbl_abrechnung
+				WHERE
+					abrechnungsdatum=".$this->db_add_param($abrechnungsdatum)."
+					AND kostenstelle_id is null
+					AND abschluss=false
+				";
+
+		if($result = $this->db_query($qry))
+		{
+			while($row = $this->db_fetch_object($result))
+			{
+				$obj = new abrechnung();
+
+				$obj->abrechnung_id = $row->abrechnung_id;
+				$obj->mitarbeiter_uid = $row->mitarbeiter_uid;
+				$obj->kostenstelle_id = $row->kostenstelle_id;
+				$obj->konto_id = $row->konto_id;
+				$obj->abrechnungsdatum = $row->abrechnungsdatum;
+				$obj->sv_lfd = $row->sv_lfd;
+				$obj->sv_satz = $row->sv_satz;
+				$obj->sv_teiler = $row->sv_teiler;
+				$obj->honorar_dgf = $row->honorar_dgf;
+				$obj->honorar_offen = $row->honorar_offen;
+				$obj->brutto = $row->brutto;
+				$obj->netto = $row->netto;
+				$obj->lst_lfd = $row->lst_lfd;
+				$obj->log = $row->log;
+
+				$this->result[] = $obj;
+			}
+			return true;
+		}
+		else
+		{
+			$this->errormsg = 'Fehler beim Laden der Daten';
+			return false;
+		}
+	}
+
+
+	/**
+	 * Laedt die Aufteilung eines Abrechnungsdatums
+	 *
+	 * @param $mitarbeiter_uid UID des Mitarbeiters
+	 * @param $abrechnungsdatum Datum der Abrechnung
+	 * @return true wenn es die letzte abrechnung ist
+	 * @reutrn false wenn nicht
+	 */
+	public function loadAufteilung($mitarbeiter_uid, $abrechnungsdatum)
+	{
+		$qry = "SELECT
+					tbl_abrechnung.*, tbl_kostenstelle.kostenstelle_nr
+				FROM
+					addon.tbl_abrechnung
+					JOIN wawi.tbl_kostenstelle USING (kostenstelle_id)
+				WHERE
+					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)."
+					AND abrechnungsdatum=".$this->db_add_param($abrechnungsdatum)."
+					AND abschluss=false
+					AND kostenstelle_id is NOT NULL";
+
+		if($result = $this->db_query($qry))
+		{
+			while($row = $this->db_fetch_object($result))
+			{
+				$obj = new stdClass();
+
+				$obj->abrechnung_id = $row->abrechnung_id;
+				$obj->mitarbeiter_uid = $row->mitarbeiter_uid;
+				$obj->kostenstelle_id = $row->kostenstelle_id;
+				$obj->konto_id = $row->konto_id;
+				$obj->abrechnungsdatum = $row->abrechnungsdatum;
+				$obj->sv_lfd = $row->sv_lfd;
+				$obj->sv_satz = $row->sv_satz;
+				$obj->sv_teiler = $row->sv_teiler;
+				$obj->honorar_dgf = $row->honorar_dgf;
+				$obj->honorar_offen = $row->honorar_offen;
+				$obj->brutto = $row->brutto;
+				$obj->netto = $row->netto;
+				$obj->lst_lfd = $row->lst_lfd;
+				$obj->log = $row->log;
+				$obj->kostenstelle_nr = $row->kostenstelle_nr;
+
+				$this->result[] = $obj;
+			}
+
+			return true;
+		}
+		else
+		{
+			$this->errormsg = 'Fehler beim Laden der Daten';
+			return false;
+		}
+	}
+
 }
 ?>
