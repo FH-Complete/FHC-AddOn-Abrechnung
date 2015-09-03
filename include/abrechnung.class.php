@@ -173,7 +173,7 @@ class abrechnung extends basis_db
 				WHERE
 					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)."
 					AND kostenstelle_id is null
-					AND abrechnungsdatum>".$this->db_add_param($startdatum)."
+					AND abrechnungsdatum>=".$this->db_add_param($startdatum)."
 				ORDER BY
 					abrechnungsdatum desc LIMIT 1";
 
@@ -591,8 +591,8 @@ class abrechnung extends basis_db
 			{
 				if($row->kostenstelle_id!='')
 				{
-					$this->aufteilung[$row->studiengang_kz]['betrag']=$row->betrag;
-					$this->aufteilung[$row->studiengang_kz]['kostenstelle_id']=$row->kostenstelle_id;
+					$this->aufteilung[$row->oe_kurzbz]['betrag']=$row->betrag;
+					$this->aufteilung[$row->oe_kurzbz]['kostenstelle_id']=$row->kostenstelle_id;
 					$gesamtbetrag+=$row->betrag;
 				}
 			}
