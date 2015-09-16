@@ -687,6 +687,58 @@ class abrechnung extends basis_db
 			return false;
 	}
 
+
+	/**
+	 *
+	 */
+	public function save()
+	{
+
+		if($this->new)
+		{
+			$qry = "INSERT INTO addon.tbl_abrechnung(mitarbeiter_uid, kostenstelle_id, konto_id, abrechnungsdatum,
+					sv_lfd, sv_satz, sv_teiler, honorar_dgf, honorar_offen, brutto, netto,
+					lst_lfd, log, abschluss) VALUES(".
+					$this->db_add_param($this->mitarbeiter_uid).',null,'.
+					$this->db_add_param($this->konto_id).','.
+					$this->db_add_param($this->abrechnungsdatum).','.
+					$this->db_add_param($this->sv_lfd).','.
+					$this->db_add_param($this->sv_satz).','.
+					$this->db_add_param($this->sv_teiler).','.
+					$this->db_add_param($this->honorar_dgf).','.
+					$this->db_add_param($this->honorar_offen).','.
+					$this->db_add_param($this->brutto).','.
+					$this->db_add_param($this->netto).','.
+					$this->db_add_param($this->lst_lfd).','.
+					$this->db_add_param($this->log).','.
+					$this->db_add_param($this->abschluss, FHC_BOOLEAN).');';
+		}
+		else
+		{
+			$qry = "UPDATE addon.tbl_abrechnung
+					SET mitarbeiter_uid=".$this->db_add_param($this->mitarbeiter_uid).','.
+					' kostenstelle_id='.$this->db_add_param($this->kostenstelle_id).','.
+					' konto_id='.$this->db_add_param($this->konto_id).','.
+					' abrechnungsdatum='.$this->db_add_param($this->abrechnungsdatum).','.
+					' sv_lfd='.$this->db_add_param($this->sv_lfd).','.
+					' sv_satz='.$this->db_add_param($this->sv_satz).','.
+					' sv_teiler='.$this->db_add_param($this->sv_teiler).','.
+					' honorar_dgf='.$this->db_add_param($this->honorar_dgf).','.
+					' honorar_offen='.$this->db_add_param($this->honorar_offen).','.
+					' brutto='.$this->db_add_param($this->brutto).','.
+					' netto='.$this->db_add_param($this->netto).','.
+					' lst_lfd='.$this->db_add_param($this->lst_lfd).','.
+					' log='.$this->db_add_param($this->log).','.
+					' abschluss='.$this->db_add_param($this->abschluss, FHC_BOOLEAN).' '.
+					' WHERE abrechnung_id='.$this->db_add_param($this->abrechnung_id, FHC_INTEGER, false);
+		}
+
+		if($this->db_query($qry))
+			return true;
+		else
+			return false;
+	}
+
 	/**
 	 * Liefert die Brutto Summe
 	 */
@@ -1179,5 +1231,43 @@ class abrechnung extends basis_db
 		}
 	}
 
+	/**
+	 * Liefert alle Personen die zu einem Abrechnungsdatum abgerechnet werden muessen
+	 */
+	public function getPersonenAbrechnung($abrechnungsdatum)
+	{
+		$qry = "SELECT
+					distinct tbl_person.vorname, tbl_person.nachname, tbl_person.titelpre, tbl_person.titelpost,
+					tbl_mitarbeiter.mitarbeiter_uid
+				FROM
+					bis.tbl_bisverwendung
+					JOIN public.tbl_mitarbeiter USING(mitarbeiter_uid)
+					JOIN public.tbl_benutzer ON(tbl_mitarbeiter.mitarbeiter_uid=tbl_benutzer.uid)
+					JOIN public.tbl_person ON(tbl_benutzer.person_id=tbl_person.person_id)
+				WHERE
+					".$this->db_add_param($abrechnungsdatum)." between tbl_bisverwendung.beginn AND tbl_bisverwendung.ende
+					AND NOT tbl_mitarbeiter.fixangestellt";
+
+		if($result = $this->db_query($qry))
+		{
+			while($row = $this->db_fetch_object($result))
+			{
+				$obj = new stdClass();
+				$obj->vorname = $row->vorname;
+				$obj->nachname = $row->nachname;
+				$obj->titelpre = $row->titelpre;
+				$obj->titlepost  = $row->titelpost;
+				$obj->mitarbeiter_uid = $row->mitarbeiter_uid;
+
+				$this->result[] = $obj;
+			}
+			return true;
+		}
+		else
+		{
+			$this->errormsg = 'Fehler beim Laden der Daten';
+			return false;
+		}
+	}
 }
 ?>

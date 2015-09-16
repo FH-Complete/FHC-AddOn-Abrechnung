@@ -106,12 +106,19 @@ echo '<!DOCTYPE html>
 					</ul>
 				</li>
 				<li class="dropdown">
+					<a href="#import" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true">Import <span class="caret"></span></a>
+					<ul class="dropdown-menu" role="menu" data-name="data">
+						<li><a href="abrechnung.php?work=csvimport">Import</a></li>
+					</ul>
+				</li>
+				<li class="dropdown">
 					<a href="#export" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true">Export <span class="caret"></span></a>
 					<ul class="dropdown-menu" role="menu" data-name="data">
 						<li><a href="abrechnung.php?work=csvexport">LV60-Export</a></li>
 						<li><a href="abrechnung.php?work=csvexport&sz">LV60sz-Export</a></li>
 						<li><a href="abrechnung.php?work=csvexport&lv61">LV61-Export</a></li>
 						<li><a href="../../../content/statistik/vertragsuebersicht.xls.php">SV-Export</a></li>
+						<li><a href="abrechnung.php?work=honuebersicht">Honoraruebersicht</a></li>
 					</ul>
 				</li>
 			</ul>
@@ -168,6 +175,24 @@ if($username=='')
 		if(isset($_POST['do']) && $_POST['do']=='generate')
 			generateVerwendung($studiensemester_kurzbz);
 		showFehlendeVerwendung($studiensemester_kurzbz);
+	}
+	elseif($work=='honuebersicht')
+	{
+		echo '<h1 class="page-header">Honoraruebersicht</h1>
+
+		Bitte wählen Sie das zu exportierende Monat:<br><br>
+		<form action="../../../content/pdfExport.php" method="GET">
+		<input type="hidden" name="xsl" value="HonUebersicht" />
+		<input type="hidden" name="xml" value="honoraruebersicht.xml.php" />
+		';
+		printAbrechnungsmonatDropDown();
+		echo '<input type="submit" value="Erstellen" />';
+		echo '</form>';
+
+	}
+	elseif($work=='csvimport')
+	{
+		include("csvimport.inc.php");
 	}
 	elseif($work=='csvexport')
 	{
