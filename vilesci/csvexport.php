@@ -48,21 +48,21 @@ $sonderzahlung = (isset($_REQUEST['sz'])?true:false);
 
 $jahr = mb_substr($abrechnungsmonat, mb_strpos($abrechnungsmonat,'/')+1);
 $monat = mb_substr($abrechnungsmonat,0,mb_strpos($abrechnungsmonat,'/'));
-$abrechnungsdatum=date('Y-m-t',mktime(0,0,0,$monat,1, $jahr));	
+$abrechnungsdatum=date('Y-m-t',mktime(0,0,0,$monat,1, $jahr));
 $stsem = $stsem_obj->getSemesterFromDatum($abrechnungsdatum);
-$qry = "SELECT 
+$qry = "SELECT
 		tbl_mitarbeiter.personalnummer, tbl_abrechnung.mitarbeiter_uid, tbl_abrechnung.brutto, tbl_kostenstelle.kostenstelle_nr
-	FROM 
+	FROM
 		addon.tbl_abrechnung
 		JOIN wawi.tbl_kostenstelle USING(kostenstelle_id)
 		JOIN public.tbl_mitarbeiter USING(mitarbeiter_uid)
-	WHERE 
+	WHERE
 		abrechnungsdatum=".$db->db_add_param($abrechnungsdatum)." AND kostenstelle_id is not null";
 if($sonderzahlung)
 	$qry.=" AND abschluss=true";
 else
 	$qry.=" AND abschluss=false";
-
+$qry.=" ORDER BY personalnummer";
 if($result = $db->db_query($qry))
 {
 	header( 'Content-Type: text/csv' );
@@ -73,14 +73,14 @@ if($result = $db->db_query($qry))
 	while($row = $db->db_fetch_object($result))
 	{
 		// Wenn die Person nur in Lehrgaengen unterrichtet, dann ist die Lohnart 150 sonst 151
-		$qry = "SELECT 
+		$qry = "SELECT
 				1
-			FROM 
+			FROM
 				lehre.tbl_lehreinheitmitarbeiter
 				JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
 				JOIN lehre.tbl_lehrveranstaltung USING(lehrveranstaltung_id)
-			WHERE 
-				mitarbeiter_uid=".$db->db_add_param($row->mitarbeiter_uid)." 
+			WHERE
+				mitarbeiter_uid=".$db->db_add_param($row->mitarbeiter_uid)."
 				AND tbl_lehreinheit.studiensemester_kurzbz=".$db->db_add_param($stsem)."
 				AND studiengang_kz>0 AND studiengang_kz<10000";
 
@@ -88,7 +88,7 @@ if($result = $db->db_query($qry))
 		if($result_lohnart = $db->db_query($qry))
 			if($db->db_num_rows($result_lohnart)>0)
 				$lohnart=151;
-				
+
 		if($sonderzahlung)
 			$lohnart=514;
 
@@ -101,4 +101,3 @@ if($result = $db->db_query($qry))
 	fclose($fp);
 }
 ?>
-
