@@ -1269,5 +1269,58 @@ class abrechnung extends basis_db
 			return false;
 		}
 	}
+
+	/**
+	 * Prueft ob dieser Vertrag bereits bei einer Abrechnung berücksichtigt/abgerechnet wurde
+	 * @param $vertrag_id
+	 * @return boolean true wenn abgerechnet false wenn nicht
+	 */
+	public function isTeilabgerechnet($vertrag_id)
+	{
+		/*
+		 - Hat es schon den status abgerechnet dann darf gar nicht gelöscht werden
+		 - Wenn es ein Lehrauftrag ist, dann das Datum der 1. Stunde ermitteln und schauen ob es eine Abrechnung nach dem datum gibt.
+		 - Wenn es ein Sonderhonorar ist dann das Datum ermitteln und schauen ob es eine Abrechnung nach dem Datum gibt.
+		*/
+		$vertrag = new vertrag();
+		if($vertrag->getStatus($vertrag_id, 'abgerechnet'))
+			return true;
+
+		$qry = "SELECT 1 FROM addon.tbl_abrechnung
+				WHERE
+					abrechnungsdatum>=(
+						SELECT min(tbl_stundenplan.datum) FROM
+						lehre.tbl_vertrag
+						JOIN lehre.tbl_lehreinheitmitarbeiter USING(vertrag_id)
+						JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
+						JOIN lehre.tbl_stundenplan USING(lehreinheit_id)
+						WHERE
+							vertrag_id=".$this->db_add_param($vertrag_id)."
+						GROUP BY tbl_stundenplan.datum LIMIT 1)
+					AND mitarbeiter_uid=(SELECT mitarbeiter_uid FROM lehre.tbl_lehreinheitmitarbeiter
+				 		WHERE vertrag_id=".$this->db_add_param($vertrag_id, FHC_INTEGER).")
+				UNION
+				SELECT 1 FROM addon.tbl_abrechnung
+				WHERE
+					abrechnungsdatum>=(SELECT vertragsdatum FROM lehre.tbl_vertrag
+						WHERE vertrag_id=".$this->db_add_param($vertrag_id, FHC_INTEGER).")
+					AND mitarbeiter_uid in(SELECT uid FROM public.tbl_benutzer
+ 						WHERE person_id=(SELECT person_id FROM lehre.tbl_vertrag where vertrag_id=".$this->db_add_param($vertrag_id)."))
+					AND NOT EXISTS(SELECT 1 FROM lehre.tbl_lehreinheitmitarbeiter WHERE vertrag_id=".$this->db_add_param($vertrag_id).")
+				";
+
+		if($result = $this->db_query($qry))
+		{
+			if($this->db_num_rows($result)>0)
+				return true;
+			else
+				return false;
+		}
+		else
+		{
+			$this->errormsg='Fehler beim Laden der Daten';
+			return false;
+		}
+	}
 }
 ?>
