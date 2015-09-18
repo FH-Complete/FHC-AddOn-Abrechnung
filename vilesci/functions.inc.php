@@ -266,6 +266,34 @@ function generateVertraege($studiensemester_kurzbz)
 	global $uid;
 	$errormsg='';
 
+	// Falsch zugeordnete Vertraege entfernen
+	$vertrag = new vertrag();
+	$vertrag->getFalscheVertraege($studiensemester_kurzbz);
+
+	foreach($vertrag->result as $row)
+	{
+		$abrechnung_obj = new abrechnung();
+		$person_obj = new person();
+		$person_obj->load($row->person_id);
+
+		if(!$abrechnung_obj->isTeilabgerechnet($row->vertrag_id))
+		{
+			$vertrag_obj = new vertrag();
+			if(!$vertrag_obj->delete($row->vertrag_id))
+			{
+				echo "<br>Fehler beim Löschen des Vertrags $row->bezeichnung von $person_obj->vorname $person_obj->nachname";
+			}
+			else
+			{
+				echo "<br>Vertrag $row->bezeichnung von $person_obj->vorname $person_obj->nachname wurde erfolgreich entfernt";
+			}
+		}
+		else
+		{
+			echo "<br>Vertrag $row->bezeichnung von $person_obj->vorname $person_obj->nachname kann nicht gelöscht werden da dieser bereits Abgerechnet wurde";
+		}
+	}
+
 	$vertrag_person = new vertrag();
 	if($vertrag_person->loadPersonenNichtZugeordnet($studiensemester_kurzbz))
 	{
@@ -278,7 +306,7 @@ function generateVertraege($studiensemester_kurzbz)
 				{
 					if($row_detail->betrag=='' || $row_detail->betrag==0)
 						continue;
-					echo '<br>Erstelle Vertrag für '.$row_person->nachname.' Vertrag '.$row_detail->type.' '.$row_detail->betrag;
+					echo '<br>Erstelle Vertrag für '.$row_person->vorname.' '.$row_person->nachname.' ('.$row_detail->type.') € '.number_format($row_detail->betrag,2,',','.');
 					flush();
 					ob_flush();
 					$vertrag = new vertrag();
@@ -372,6 +400,14 @@ function showFehlendeVertraege($studiensemester_kurzbz)
 	printStudiensemesterDropDown($studiensemester_kurzbz);
 	echo '<input type="submit" value="Auswahl" />';
 	echo '</form>';
+
+	$vertrag = new vertrag();
+	$vertrag->getFalscheVertraege($studiensemester_kurzbz);
+
+	if(count($vertrag->result)>0)
+	{
+		echo count($vertrag->result).' Verträge sind falschen Personen zugeordnet und werden entfernt<br>';
+	}
 
 	$vertrag = new vertrag();
 	if($vertrag->loadPersonenNichtZugeordnet($studiensemester_kurzbz))
