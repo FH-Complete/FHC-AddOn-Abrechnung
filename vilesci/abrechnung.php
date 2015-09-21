@@ -184,6 +184,7 @@ if($username=='')
 		<form action="../../../content/pdfExport.php" method="GET">
 		<input type="hidden" name="xsl" value="HonUebersicht" />
 		<input type="hidden" name="xml" value="honoraruebersicht.xml.php" />
+		<input type="hidden" name="output" value="pdf" />
 		';
 		printAbrechnungsmonatDropDown();
 		echo '<input type="submit" value="Erstellen" />';
