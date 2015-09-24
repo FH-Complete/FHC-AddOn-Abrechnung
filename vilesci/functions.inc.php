@@ -306,6 +306,11 @@ function generateVertraege($studiensemester_kurzbz)
 				{
 					if($row_detail->betrag=='' || $row_detail->betrag==0)
 						continue;
+
+					// Wenn das Studiensemester nicht passt dann ueberspringen da sonst alte Vertraege angelegt werden
+					if($row_detail->studiensemester_kurzbz!='' && $row_detail->studiensemester_kurzbz!=$studiensemester_kurzbz)
+						continue;
+
 					echo '<br>Erstelle Vertrag für '.$row_person->vorname.' '.$row_person->nachname.' ('.$row_detail->type.') € '.number_format($row_detail->betrag,2,',','.');
 					flush();
 					ob_flush();
