@@ -294,6 +294,36 @@ function generateVertraege($studiensemester_kurzbz)
 		}
 	}
 
+	// Betraege korrigieren bei bestehenden Lehrauftraegen
+	$vertrag = new vertrag();
+	$vertrag->getFalscheBetraege($studiensemester_kurzbz);
+
+	if(count($vertrag->result)>0)
+	{
+		foreach($vertrag->result as $row)
+		{
+			$person_obj = new person();
+			$person_obj->load($row->person_id);
+
+			$vertrag_obj = new vertrag();
+			if($vertrag_obj->load($row->vertrag_id))
+			{
+				$vertrag_obj->betrag = $row->stundensatz*$row->semesterstunden;
+				$vertrag_obj->updateamum = date('Y-m-d H:i:s');
+				$vertrag_obj->updatevon='vertraggenerate';
+				if($vertrag_obj->save())
+					echo "<br>Vertrag $row->bezeichnung von $person_obj->vorname $person_obj->nachname Betrag korrigiert von $row->betrag auf $vertrag_obj->betrag";
+				else
+					echo "<br>Vertrag $row->bezeichnung von $person_obj->vorname $person_obj->nachname Betrag konnte nicht korrigiert werden:".$vertrag_obj->errormsg;
+			}
+			else
+			{
+				echo "<br>Vertrag $row->bezeichnung von $person_obj->vorname $person_obj->nachname Betrag konnte nicht korrigiert werden:".$vertrag_obj->errormsg;
+			}
+		}
+	}
+
+	// Neue Vertraege erstellen
 	$vertrag_person = new vertrag();
 	if($vertrag_person->loadPersonenNichtZugeordnet($studiensemester_kurzbz))
 	{
@@ -406,6 +436,8 @@ function showFehlendeVertraege($studiensemester_kurzbz)
 	echo '<input type="submit" value="Auswahl" />';
 	echo '</form>';
 
+
+	// Vertraege holen die falschen Personen zugeordnet sind
 	$vertrag = new vertrag();
 	$vertrag->getFalscheVertraege($studiensemester_kurzbz);
 
@@ -413,6 +445,17 @@ function showFehlendeVertraege($studiensemester_kurzbz)
 	{
 		echo count($vertrag->result).' Verträge sind falschen Personen zugeordnet und werden entfernt<br>';
 	}
+
+	// Vertraege holen die falschen Personen zugeordnet sind
+	$vertrag = new vertrag();
+	$vertrag->getFalscheBetraege($studiensemester_kurzbz);
+
+	if(count($vertrag->result)>0)
+	{
+		echo count($vertrag->result).' Verträge haben falsche Beträge und werden korrigiert<br>';
+	}
+
+	// Vertraege holen die falsche Beträge haben
 
 	$vertrag = new vertrag();
 	if($vertrag->loadPersonenNichtZugeordnet($studiensemester_kurzbz))
