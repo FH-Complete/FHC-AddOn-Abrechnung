@@ -478,6 +478,10 @@ class abrechnung extends basis_db
 
 		$i=0;
 
+		// Wenn die Verwendung am letzten Tag des Monats startet wird 1 Tag abgerechnet
+		// zB am 30.9. oder 31.8.
+		if($dtstartdatum==$dtendedatum)
+			return 1;
 
 		while($datum<$ende || $datum->format('d')==31)
 		{

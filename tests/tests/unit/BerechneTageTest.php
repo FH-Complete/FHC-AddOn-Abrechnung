@@ -21,6 +21,15 @@ class BerechneTageTest extends \PHPUnit_Framework_TestCase
 		$this->assertEquals(1,$abrechnung->BerechneGesamtTage('2015-08-31','2015-08-31', '2016-02-01'));
     }
 
+      /**
+         * Wenn die erste Abrechnung am 30. stattfindet und letzter Tag im Monat muss 1 geliefert werden
+         */
+    public function testTag30()
+    {
+                $abrechnung = new abrechnung();
+                $this->assertEquals(1,$abrechnung->BerechneGesamtTage('2015-09-30','2015-09-30', '2016-02-01'));
+    }
+
 	/**
 	 * Volles Monat = 30 Tage
 	 */
