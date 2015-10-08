@@ -93,7 +93,7 @@ if($result = $db->db_query($qry))
 			$lohnart=514;
 
 		//Abrechnungsmonat;Kundenummer;Personalnummer;;Lohnart;;;lfd_brutto;kostenstelle;
-		$fields = array($monat, KUNDENNUMMER, $row->personalnummer,'', $lohnart,'','','', number_format($row->brutto,2,',',''), $row->kostenstelle_nr);
+		$fields = array($monat, KUNDENNUMMER, $row->personalnummer,'', $lohnart,'','', number_format($row->brutto,2,',',''), $row->kostenstelle_nr);
 
 		fputcsv($fp, $fields,';');
 
