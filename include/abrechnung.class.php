@@ -172,9 +172,11 @@ class abrechnung extends basis_db
 					addon.tbl_abrechnung
 				WHERE
 					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)."
-					AND kostenstelle_id is null
-					AND abrechnungsdatum>=".$this->db_add_param($startdatum)."
-				ORDER BY
+					AND kostenstelle_id is null";
+		if(!is_null($startdatum))
+			$qry.=" AND abrechnungsdatum>=".$this->db_add_param($startdatum);
+
+		$qry.="	ORDER BY
 					abrechnungsdatum desc LIMIT 1";
 
 		if($result = $this->db_query($qry))
