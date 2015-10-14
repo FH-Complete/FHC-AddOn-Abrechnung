@@ -20,8 +20,9 @@
 /**
  * Korrigiert die bestehenden Verwendungen und setzt das Startdatum
  * neu wenn sich die erste Stunde eines Lektors geaendert hat.
- * Das Beginndatum wird nur korrigiert wenn der Lektor noch nicht abgerechnet wurde
+ * Das Beginndatum wird nur korrigiert wenn der Lektor noch nicht abgerechnet wurde.
  *
+ * Aufruf über Commandline mit Mailversand: php korrigiere_verwendung.php --mailto info@fhcomplete.org
  */
 require_once(dirname(__FILE__).'/../../../config/vilesci.config.inc.php');
 require_once(dirname(__FILE__).'/../../../include/functions.inc.php');
@@ -30,6 +31,7 @@ require_once(dirname(__FILE__).'/../../../include/studiensemester.class.php');
 require_once(dirname(__FILE__).'/../../../include/datum.class.php');
 require_once(dirname(__FILE__).'/../../../include/mitarbeiter.class.php');
 require_once(dirname(__FILE__).'/../../../include/bisverwendung.class.php');
+require_once(dirname(__FILE__).'/../../../include/mail.class.php');
 require_once(dirname(__FILE__).'/../include/abrechnung.class.php');
 require_once(dirname(__FILE__).'/../config.inc.php');
 
@@ -53,6 +55,21 @@ if(!$stsem->load($studiensemester_kurzbz))
 {
 	die('Fehler beim Laden des Studiensemesters');
 }
+
+// Commandline Paramter parsen bei Aufruf ueber Cronjob
+// zb php korrigiere_verwendung.php --mailto info@fhcomplete.org
+$longopt = array(
+  "mailto:"
+);
+$commandlineparams = getopt('', $longopt);
+if(isset($commandlineparams['mailto']))
+	$mailto=$commandlineparams['mailto'];
+elseif(isset($_GET['mailto']))
+	$mailto=$_GET['mailto'];
+else
+	$mailto='';
+
+$mailmessage='';
 
 // Alle Personen holen bei denen das Startdatum nicht korrekt ist
 $qry = "SELECT
@@ -125,10 +142,24 @@ if($result = $db->db_query($qry))
 }
 echo 'Alle Zuteilungen korrigiert'.PHP_EOL;
 
+if($mailto!='' && $mailmessage!='')
+{
+	$mailmessage = "Dies ist ein automatisches Mail.\nFolgende Korrekturen wurden an den BIS-Verwendungen vorgenommen:\n\n".$mailmessage;
+
+	$mail = new mail($mailto, 'no-reply@'.DOMAIN,'Korrektur BIS-Verwendung',$mailmessage);
+
+	if(!$mail->send())
+		die('Fehler beim Senden des Mails!');
+	else
+		echo 'Mail verschickt an: '.$mailto;
+}
+
 function outmessage($mitarbeiter_uid, $message)
 {
+	global $mailmessage;
 	$mitarbeiter = new mitarbeiter($mitarbeiter_uid);
 
 	echo $mitarbeiter->vorname.' '.$mitarbeiter->nachname.' '.$message.PHP_EOL.'<br>';
+	$mailmessage .= $mitarbeiter->vorname.' '.$mitarbeiter->nachname.' '.$message.PHP_EOL;
 }
 ?>
