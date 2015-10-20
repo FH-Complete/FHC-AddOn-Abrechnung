@@ -467,10 +467,10 @@ xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn
             <text:p text:style-name="P5"/>
           </table:table-cell>
           <table:table-cell table:style-name="Tabelle2.A1" office:value-type="string">
-            <text:p text:style-name="P10">Blz,KtoNr</text:p>
+            <text:p text:style-name="P10">BIC,IBAN</text:p>
           </table:table-cell>
           <table:table-cell table:style-name="Tabelle2.A1" office:value-type="string">
-            <text:p text:style-name="P6"><xsl:value-of select="bank_blz" /> <xsl:value-of select="bank_kontonummer" /></text:p>
+            <text:p text:style-name="P6"><xsl:value-of select="bank_bic" /> <xsl:value-of select="bank_iban" /></text:p>
           </table:table-cell>
           <table:table-cell table:style-name="Tabelle2.A1" office:value-type="string">
             <text:p text:style-name="P10">Konto</text:p>
@@ -629,6 +629,54 @@ xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn
             </table:table-cell>
           </table:table-row>
         </table:table>
+        <xsl:if test="selbststudium">
+            <text:p text:style-name="P16"/>
+            <text:p text:style-name="P28">Folgende Anteile am Selbststudium sind im Gesamthonorar enthalten:</text:p>
+            <table:table table:name="Lehrveranstaltungen" table:style-name="Lehrveranstaltungen">
+              <table:table-column table:style-name="Lehrveranstaltungen.A"/>
+              <table:table-column table:style-name="Lehrveranstaltungen.B"/>
+              <table:table-column table:style-name="Lehrveranstaltungen.C"/>
+              <table:table-column table:style-name="Lehrveranstaltungen.D"/>
+              <table:table-column table:style-name="Lehrveranstaltungen.E"/>
+              <table:table-row>
+                <table:table-cell table:style-name="Lehrveranstaltungen.A1" office:value-type="string">
+                  <text:p text:style-name="P12">UnterrichtsNr</text:p>
+                </table:table-cell>
+                <table:table-cell table:style-name="Lehrveranstaltungen.B1" office:value-type="string">
+                  <text:p text:style-name="P12">Lehrveranstaltung</text:p>
+                </table:table-cell>
+                <table:table-cell table:style-name="Lehrveranstaltungen.B1" office:value-type="string">
+                  <text:p text:style-name="P12">Std</text:p>
+                </table:table-cell>
+                <table:table-cell table:style-name="Lehrveranstaltungen.B1" office:value-type="string">
+                  <text:p text:style-name="P12">Hon.</text:p>
+                </table:table-cell>
+                <table:table-cell table:style-name="Lehrveranstaltungen.E1" office:value-type="string">
+                  <text:p text:style-name="P12">Ges. Hon.</text:p>
+                </table:table-cell>
+              </table:table-row>
+    			<xsl:apply-templates select="selbststudium"/>
+
+    		<!-- Letzte Row Zeichnen damit unten ein Rahmen ist -->
+              <table:table-row>
+                <table:table-cell table:style-name="Lehrveranstaltungen.ALast" office:value-type="string">
+                  <text:p text:style-name="P9"></text:p>
+                </table:table-cell>
+                <table:table-cell table:style-name="Lehrveranstaltungen.BLast" office:value-type="string">
+                  <text:p text:style-name="P9"></text:p>
+                </table:table-cell>
+                <table:table-cell table:style-name="Lehrveranstaltungen.BLast" office:value-type="string">
+                  <text:p text:style-name="P9"></text:p>
+                </table:table-cell>
+                <table:table-cell table:style-name="Lehrveranstaltungen.BLast" office:value-type="string">
+                  <text:p text:style-name="P9"></text:p>
+                </table:table-cell>
+                <table:table-cell table:style-name="Lehrveranstaltungen.ELast" office:value-type="string">
+                  <text:p text:style-name="P9"></text:p>
+                </table:table-cell>
+              </table:table-row>
+            </table:table>
+        </xsl:if>
         <text:p text:style-name="P16"/>
         <text:p text:style-name="P28">Sonderhonorare</text:p>
         <table:table table:name="Sonderhonorare" table:style-name="Sonderhonorare">
@@ -715,6 +763,27 @@ xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn
             </table:table-cell>
           </table:table-row>
 </xsl:template>
+
+<xsl:template match="selbststudium">
+          <table:table-row>
+            <table:table-cell table:style-name="Lehrveranstaltungen.A2" office:value-type="string">
+              <text:p text:style-name="P9"><xsl:value-of select="lehreinheit_id" /></text:p>
+            </table:table-cell>
+            <table:table-cell table:style-name="Lehrveranstaltungen.B2" office:value-type="string">
+              <text:p text:style-name="P9"><xsl:value-of select="bezeichnung" /></text:p>
+            </table:table-cell>
+            <table:table-cell table:style-name="Lehrveranstaltungen.B2" office:value-type="string">
+              <text:p text:style-name="P9"><xsl:value-of select="semesterstunden" /></text:p>
+            </table:table-cell>
+            <table:table-cell table:style-name="Lehrveranstaltungen.B2" office:value-type="string">
+              <text:p text:style-name="P9"><xsl:value-of select="stundensatz" /></text:p>
+            </table:table-cell>
+            <table:table-cell table:style-name="Lehrveranstaltungen.E2" office:value-type="string">
+              <text:p text:style-name="P9"><xsl:value-of select="gesamt" /></text:p>
+            </table:table-cell>
+          </table:table-row>
+</xsl:template>
+
 <xsl:template match="sonderhonorar">
           <table:table-row>
             <table:table-cell table:style-name="Sonderhonorare.A2" office:value-type="string">

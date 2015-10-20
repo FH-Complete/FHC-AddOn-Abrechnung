@@ -134,6 +134,7 @@ foreach($abrechnung->result as $row)
 
 	$sonderhonorar=array();
 	$lehrauftrag=array();
+	$selbststudium=array();
 	foreach($vertrag->result as $row_vertrag)
 	{
 		$vertragdetail = new vertrag();
@@ -174,6 +175,17 @@ foreach($abrechnung->result as $row)
 						'stundensatz'=>$lem_arr[$lehreinheit_id][$mitarbeiter->uid]->stundensatz,
 						'semesterstunden'=>$lem_arr[$lehreinheit_id][$mitarbeiter->uid]->semesterstunden,
 						'gesamt'=>$row_vertrag->betrag);
+
+					if($lem_arr[$lehreinheit_id][$mitarbeiter->uid]->semesterstunden != $lem_arr[$lehreinheit_id][$mitarbeiter->uid]->planstunden)
+					{
+						$selbststudium[] = array('bezeichnung'=>$row_detail->bezeichnung,
+								'lehreinheit_id'=>$lehreinheit_id,
+								'bezeichnung'=>$stg.$lv_arr[$lehrveranstaltung_id]->semester.'-'.$lv_arr[$lehrveranstaltung_id]->kurzbz.'-'.$le_arr[$lehreinheit_id]->lehrform_kurzbz,
+								'stundensatz'=>$lem_arr[$lehreinheit_id][$mitarbeiter->uid]->stundensatz,
+								'semesterstunden'=>($lem_arr[$lehreinheit_id][$mitarbeiter->uid]->semesterstunden - $lem_arr[$lehreinheit_id][$mitarbeiter->uid]->planstunden),
+								'gesamt'=>($lem_arr[$lehreinheit_id][$mitarbeiter->uid]->semesterstunden - $lem_arr[$lehreinheit_id][$mitarbeiter->uid]->planstunden)*$lem_arr[$lehreinheit_id][$mitarbeiter->uid]->stundensatz);
+					 }
+
 
 					$qry_stunde = "SELECT min(stunde) as von, max(stunde) as bis, datum
 						FROM
@@ -226,6 +238,17 @@ foreach($abrechnung->result as $row)
 				<semesterstunden>'.number_format($row_lehrauftrag['semesterstunden'],1).'</semesterstunden>
 				<gesamt>'.$row_lehrauftrag['gesamt'].'</gesamt>
 			</lehrauftrag>';
+	}
+
+	foreach($selbststudium as $row_selbststudium)
+	{
+		echo '<selbststudium>
+				<lehreinheit_id>'.$row_selbststudium['lehreinheit_id'].'</lehreinheit_id>
+				<bezeichnung>'.$row_selbststudium['bezeichnung'].'</bezeichnung>
+				<stundensatz>'.$row_selbststudium['stundensatz'].'</stundensatz>
+				<semesterstunden>'.number_format($row_selbststudium['semesterstunden'],1).'</semesterstunden>
+				<gesamt>'.$row_selbststudium['gesamt'].'</gesamt>
+			</selbststudium>';
 	}
 
 	foreach($sonderhonorar as $row_sonderhonorar)
