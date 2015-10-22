@@ -32,6 +32,7 @@ require_once(dirname(__FILE__).'/../../../include/datum.class.php');
 require_once(dirname(__FILE__).'/../../../include/mitarbeiter.class.php');
 require_once(dirname(__FILE__).'/../../../include/bisverwendung.class.php');
 require_once(dirname(__FILE__).'/../../../include/mail.class.php');
+require_once(dirname(__FILE__).'/../../../include/vertrag.class.php');
 require_once(dirname(__FILE__).'/../include/abrechnung.class.php');
 require_once(dirname(__FILE__).'/../config.inc.php');
 
@@ -70,6 +71,7 @@ else
 	$mailto='';
 
 $mailmessage='';
+$mailmessage_html='';
 
 // Alle Personen holen bei denen das Startdatum nicht korrekt ist
 $qry = "SELECT
@@ -103,13 +105,13 @@ if($result = $db->db_query($qry))
 					if($abrechnung->abrechnungsdatum > $bisvw->beginn)
 					{
 						// Es gab bereits eine Abrechnung mit dem alten Beginndatum
-						outmessage($row->mitarbeiter_uid, 'wurde bereits abgerechnet -> Datum wird nicht korrigiert (ist: '.$bisvw->beginn.' soll:'.$row->beginn.')');
+						outmessage($row->mitarbeiter_uid, 'wurde bereits abgerechnet -> Datum wird nicht korrigiert (ist: '.$bisvw->beginn.' soll:'.$row->beginn.')',2);
 						$error = true;
 					}
 					elseif($abrechnung->abrechnungsdatum > $row->beginn)
 					{
 						// Es gab bereits eine Abrechnung vor dem neuen Beginndatum
-						outmessage($row->mitarbeiter_uid, 'Neues Datum liegt vor der letzten Abrechnung -> keine Korrektur');
+						outmessage($row->mitarbeiter_uid, 'Neues Datum liegt vor der letzten Abrechnung -> keine Korrektur',2);
 						$error = true;
 					}
 				}
@@ -123,11 +125,29 @@ if($result = $db->db_query($qry))
 
 				if(!$error)
 				{
+					// Wenn der Gesamtbetrag 0 ist dann nichts korrigieren da diese auch nicht abgerechnet werden
+					$vertrag = new vertrag();
+					if($vertrag->getVertragFromDatum($row->mitarbeiter_uid, $stsem->ende))
+					{
+						$gesamtbetrag=0;
+						foreach($vertrag->result as $row_betrag)
+							$gesamtbetrag = $gesamtbetrag+$row_betrag->betrag;
+
+						if($gesamtbetrag==0)
+						{
+							$error=true;
+							outmessage($row->mitarbeiter_uid, "Betrag aller Verträge auf 0 keine Korrektur noetig",3);
+						}
+					}
+				}
+
+				if(!$error)
+				{
 					$datum_alt = $bisvw->beginn;
 					$bisvw->beginn = $row->beginn;
 					if($bisvw->save())
 					{
-						outmessage($row->mitarbeiter_uid, "Datum von $datum_alt auf $row->beginn korrigiert");
+						outmessage($row->mitarbeiter_uid, "Datum von $datum_alt auf $row->beginn korrigiert",1);
 					}
 					else
 						outmessage($row->mitarbeiter_uid, $bisvw->errormsg);
@@ -136,7 +156,7 @@ if($result = $db->db_query($qry))
 		}
 		else
 		{
-			outmessage($row->mitarbeiter_uid, 'Keine Verwendung gefunden');
+			outmessage($row->mitarbeiter_uid, 'Keine Verwendung gefunden',3);
 		}
 	}
 }
@@ -145,21 +165,43 @@ echo 'Alle Zuteilungen korrigiert'.PHP_EOL;
 if($mailto!='' && $mailmessage!='')
 {
 	$mailmessage = "Dies ist ein automatisches Mail.\nFolgende Korrekturen wurden an den BIS-Verwendungen vorgenommen:\n\n".$mailmessage;
+	$mailmessage_html = "Dies ist ein automatisches Mail.<br>Folgende Korrekturen wurden an den BIS-Verwendungen vorgenommen:<br><br>".$mailmessage_html;
 
 	$mail = new mail($mailto, 'no-reply@'.DOMAIN,'Korrektur BIS-Verwendung',$mailmessage);
-
+	$mail->setHTMLContent($mailmessage_html);
 	if(!$mail->send())
 		die('Fehler beim Senden des Mails!');
 	else
 		echo 'Mail verschickt an: '.$mailto;
 }
 
-function outmessage($mitarbeiter_uid, $message)
+/**
+ * Formatiert die Meldung
+ * @param $mitarbeiter_uid UID des Mitarbeiters
+ * @param $message Meldungstext
+ * @param $lvl Wichtigkeit der Nachricht 1-3 - 3 wird im Mail nicht angezeigt, 2 ist ausgegraut
+ */
+function outmessage($mitarbeiter_uid, $message, $lvl)
 {
-	global $mailmessage;
+	global $mailmessage, $mailmessage_html;
 	$mitarbeiter = new mitarbeiter($mitarbeiter_uid);
 
 	echo $mitarbeiter->vorname.' '.$mitarbeiter->nachname.' '.$message.PHP_EOL.'<br>';
 	$mailmessage .= $mitarbeiter->vorname.' '.$mitarbeiter->nachname.' '.$message.PHP_EOL;
+
+	switch($lvl)
+	{
+		case 1:
+			$mailmessage_html .= $mitarbeiter->vorname.' '.$mitarbeiter->nachname.' '.$message.'</br>';
+			break;
+		case 2:
+			$mailmessage_html .= '<span style="color:gray">'.$mitarbeiter->vorname.' '.$mitarbeiter->nachname.' '.$message.'</span><br>';
+			break;
+		case 3:
+			//$mailmessage_html .= '<span style="color:gray">'.$mitarbeiter->vorname.' '.$mitarbeiter->nachname.' '.$message.'</span><br>';
+			break;
+		default:
+			break;
+	}
 }
 ?>
