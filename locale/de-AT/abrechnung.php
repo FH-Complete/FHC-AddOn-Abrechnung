@@ -26,4 +26,5 @@ $this->phrasen['abrechnung/lehrauftraege']='Lehraufträge';
 $this->phrasen['abrechnung/sonderhonorare']='Sonderhonorare';
 $this->phrasen['abrechnung/abrechnungsdetails']='Abrechnungsdetails';
 $this->phrasen['abrechnung/gesamthonorar']='Gesamthonorar';
+$this->phrasen['abrechnung/sonderzahlung']='Sonderzahlung';
 ?>

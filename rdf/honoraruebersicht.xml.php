@@ -208,13 +208,13 @@ foreach($abrechnung->result as $row)
 							$bis = $stunden_arr[$row_stunde->bis]['bis'];
 							$datum = $row_stunde->datum;
 							echo '<termine>
-									<lehreinheit_id>'.$row_detail->lehreinheit_id.'</lehreinheit_id>
-									<datum>'.$datum_obj->formatDatum($datum,'d.m.Y').'</datum>
-									<von>'.$von->format('H:i').'</von>
-									<bis>'.$bis->format('H:i').'</bis>
-									<einheiten>'.($row_stunde->bis-$row_stunde->von+1).'</einheiten>
-									<honorar>'.$lem->stundensatz.'</honorar>
-									<vertragsnummer>'.$row_vertrag->bezeichnung.'</vertragsnummer>';
+									<lehreinheit_id><![CDATA['.$row_detail->lehreinheit_id.']]></lehreinheit_id>
+									<datum><![CDATA['.$datum_obj->formatDatum($datum,'d.m.Y').']]></datum>
+									<von><![CDATA['.$von->format('H:i').']]></von>
+									<bis><![CDATA['.$bis->format('H:i').']]></bis>
+									<einheiten><![CDATA['.($row_stunde->bis-$row_stunde->von+1).']]></einheiten>
+									<honorar><![CDATA['.$lem->stundensatz.']]></honorar>
+									<vertragsnummer><![CDATA['.$row_vertrag->bezeichnung.']]></vertragsnummer>';
 							echo '</termine>';
 						}
 					}
@@ -232,31 +232,31 @@ foreach($abrechnung->result as $row)
 	foreach($lehrauftrag as $row_lehrauftrag)
 	{
 		echo '<lehrauftrag>
-				<lehreinheit_id>'.$row_lehrauftrag['lehreinheit_id'].'</lehreinheit_id>
-				<bezeichnung>'.$row_lehrauftrag['bezeichnung'].'</bezeichnung>
-				<stundensatz>'.$row_lehrauftrag['stundensatz'].'</stundensatz>
-				<semesterstunden>'.number_format($row_lehrauftrag['semesterstunden'],1).'</semesterstunden>
-				<gesamt>'.$row_lehrauftrag['gesamt'].'</gesamt>
+				<lehreinheit_id><![CDATA['.$row_lehrauftrag['lehreinheit_id'].']]></lehreinheit_id>
+				<bezeichnung><![CDATA['.$row_lehrauftrag['bezeichnung'].']]></bezeichnung>
+				<stundensatz><![CDATA['.$row_lehrauftrag['stundensatz'].']]></stundensatz>
+				<semesterstunden><![CDATA['.number_format($row_lehrauftrag['semesterstunden'],1).']]></semesterstunden>
+				<gesamt><![CDATA['.$row_lehrauftrag['gesamt'].']]></gesamt>
 			</lehrauftrag>';
 	}
 
 	foreach($selbststudium as $row_selbststudium)
 	{
 		echo '<selbststudium>
-				<lehreinheit_id>'.$row_selbststudium['lehreinheit_id'].'</lehreinheit_id>
-				<bezeichnung>'.$row_selbststudium['bezeichnung'].'</bezeichnung>
-				<stundensatz>'.$row_selbststudium['stundensatz'].'</stundensatz>
-				<semesterstunden>'.number_format($row_selbststudium['semesterstunden'],1).'</semesterstunden>
-				<gesamt>'.$row_selbststudium['gesamt'].'</gesamt>
+				<lehreinheit_id><![CDATA['.$row_selbststudium['lehreinheit_id'].']]></lehreinheit_id>
+				<bezeichnung><![CDATA['.$row_selbststudium['bezeichnung'].']]></bezeichnung>
+				<stundensatz><![CDATA['.$row_selbststudium['stundensatz'].']]></stundensatz>
+				<semesterstunden><![CDATA['.number_format($row_selbststudium['semesterstunden'],1).']]></semesterstunden>
+				<gesamt><![CDATA['.$row_selbststudium['gesamt'].']]></gesamt>
 			</selbststudium>';
 	}
 
 	foreach($sonderhonorar as $row_sonderhonorar)
 	{
 		echo '<sonderhonorar>
-				<datum>'.$datum_obj->formatDatum($row_sonderhonorar['datum'],'d.m.Y').'</datum>
-				<bezeichnung>'.$row_sonderhonorar['bezeichnung'].'</bezeichnung>
-				<gesamt>'.$row_sonderhonorar['gesamt'].'</gesamt>
+				<datum><![CDATA['.$datum_obj->formatDatum($row_sonderhonorar['datum'],'d.m.Y').']]></datum>
+				<bezeichnung><![CDATA['.$row_sonderhonorar['bezeichnung'].']]></bezeichnung>
+				<gesamt><![CDATA['.$row_sonderhonorar['gesamt'].']]></gesamt>
 			</sonderhonorar>';
 	}
 	echo '</honorar>';

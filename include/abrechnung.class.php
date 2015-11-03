@@ -567,7 +567,7 @@ class abrechnung extends basis_db
 				(
 				SELECT
 					sum(betrag) as betrag, tbl_studiengang.oe_kurzbz,
-					(SELECT kostenstelle_id FROM addon.tbl_abrechnung_kostenstelle WHERE studiengang_kz=tbl_lehrveranstaltung.studiengang_kz AND (sprache=tbl_lehrveranstaltung.sprache OR sprache is null) AND (orgform_kurzbz=tbl_lehrveranstaltung.orgform_kurzbz OR orgform_kurzbz is null) ORDER BY sprache NULLS LAST, orgform_kurzbz NULLS LAST limit 1) as kostenstelle_id
+					(SELECT kostenstelle_id FROM addon.tbl_abrechnung_kostenstelle WHERE studiengang_kz=tbl_lehrveranstaltung.studiengang_kz AND (sprache=(SELECT distinct sprache FROM lehre.tbl_studienplan JOIN lehre.tbl_studienplan_lehrveranstaltung USING(studienplan_id) where lehrveranstaltung_id=tbl_lehrveranstaltung.lehrveranstaltung_id AND sprache is not null LIMIT 1) OR sprache is null) AND (orgform_kurzbz=tbl_lehrveranstaltung.orgform_kurzbz OR orgform_kurzbz is null) ORDER BY sprache NULLS LAST, orgform_kurzbz NULLS LAST limit 1) as kostenstelle_id
 				FROM
 					lehre.tbl_lehreinheitmitarbeiter
 					JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
@@ -576,18 +576,18 @@ class abrechnung extends basis_db
 					JOIN lehre.tbl_vertrag ON(tbl_lehreinheitmitarbeiter.vertrag_id=tbl_vertrag.vertrag_id)
 				WHERE
 					tbl_lehreinheitmitarbeiter.vertrag_id IN(".$this->db_implode4SQL($this->vertrag_arr).")
-				GROUP BY tbl_studiengang.oe_kurzbz, tbl_lehrveranstaltung.sprache, tbl_lehrveranstaltung.orgform_kurzbz, tbl_lehrveranstaltung.studiengang_kz
-				UNION
+				GROUP BY tbl_studiengang.oe_kurzbz, tbl_lehrveranstaltung.sprache, tbl_lehrveranstaltung.orgform_kurzbz, tbl_lehrveranstaltung.studiengang_kz, tbl_lehrveranstaltung.lehrveranstaltung_id
+				UNION ALL
 				SELECT
 					sum(betrag) as betrag, tbl_studiengang.oe_kurzbz,
-					(SELECT kostenstelle_id FROM addon.tbl_abrechnung_kostenstelle WHERE studiengang_kz=tbl_lehrveranstaltung.studiengang_kz AND (sprache=tbl_lehrveranstaltung.sprache OR sprache is null) AND (orgform_kurzbz=tbl_lehrveranstaltung.orgform_kurzbz OR orgform_kurzbz is null) ORDER BY sprache NULLS LAST, orgform_kurzbz NULLS LAST limit 1) as kostenstelle_id
+					(SELECT kostenstelle_id FROM addon.tbl_abrechnung_kostenstelle WHERE studiengang_kz=tbl_lehrveranstaltung.studiengang_kz AND (sprache=(SELECT distinct sprache FROM lehre.tbl_studienplan JOIN lehre.tbl_studienplan_lehrveranstaltung USING(studienplan_id) where lehrveranstaltung_id=tbl_lehrveranstaltung.lehrveranstaltung_id AND sprache is not null LIMIT 1) OR sprache is null) AND (orgform_kurzbz=tbl_lehrveranstaltung.orgform_kurzbz OR orgform_kurzbz is null) ORDER BY sprache NULLS LAST, orgform_kurzbz NULLS LAST limit 1) as kostenstelle_id
 				FROM
 					lehre.tbl_vertrag
 					JOIN lehre.tbl_lehrveranstaltung USING(lehrveranstaltung_id)
 					JOIN public.tbl_studiengang USING(studiengang_kz)
 				WHERE
 					vertrag_id IN(".$this->db_implode4SQL($this->vertrag_arr).")
-				GROUP BY tbl_studiengang.oe_kurzbz, tbl_lehrveranstaltung.sprache, tbl_lehrveranstaltung.orgform_kurzbz, tbl_lehrveranstaltung.studiengang_kz
+				GROUP BY tbl_studiengang.oe_kurzbz, tbl_lehrveranstaltung.sprache, tbl_lehrveranstaltung.orgform_kurzbz, tbl_lehrveranstaltung.studiengang_kz, tbl_lehrveranstaltung.lehrveranstaltung_id
 				) a group by oe_kurzbz, a.kostenstelle_id";
 
 		if($result = $this->db_query($qry))

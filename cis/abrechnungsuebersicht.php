@@ -51,7 +51,7 @@ if(!check_lektor($user))
 $rechte = new benutzerberechtigung();
 $rechte->getBerechtigungen($user);
 
-if(isset($_GET['uid']) && $rechte->isBerechtigt('admin'))
+if(isset($_GET['uid']) && ($rechte->isBerechtigt('admin') || $rechte->isBerechtigung('addon/abrechnung')))
     $user = $_GET['uid'];
 
 $p = new phrasen();
@@ -337,7 +337,7 @@ foreach($vertrag->result as $row_vertrag)
         echo '</tbody></table>';
     }
     echo '<br><br><b>'.$p->t('abrechnung/gesamthonorar').':</b> € '.number_format($gesamthonorar,2,',','.');
-    echo '</td></tr></table>';
+
 
     $abrechnung = new abrechnung();
     if($abrechnung->getAbrechnungMitarbeiter($user, $abrechnungsdatum))
@@ -352,6 +352,7 @@ foreach($vertrag->result as $row_vertrag)
                 <th>'.$p->t('abrechnung/svlfd').'</th>
                 <th>'.$p->t('abrechnung/lst').'</th>
                 <th>'.$p->t('abrechnung/netto').'</th>
+                <th>'.$p->t('abrechnung/sonderzahlung').'</th>
             </tr>
             </thead>
             <tbody>';
@@ -361,11 +362,13 @@ foreach($vertrag->result as $row_vertrag)
                 <td>'.number_format($abrechnung->sv_lfd,2,',','.').'</td>
                 <td>'.number_format($abrechnung->lst_lfd,2,',','.').'</td>
                 <td>'.number_format($abrechnung->netto,2,',','.').'</td>
+                <td>'.number_format($abrechnung->brutto/6,2,',','.').'</td>
             </tr>
             </body>
             </table>
             ';
     }
+    echo '</td></tr></table>';
 ?>
 </body>
 </html>
