@@ -306,7 +306,7 @@ class abrechnung extends basis_db
 
 		// Offene Tage berechnen
 		$this->tageoffen = $this->tagegesamt - $this->tageausbezahlt;
-		$this->log.=' / Tage offen:'.$this->tageoffen;
+		$this->log.=' / Tage offen (nach dieser Abrechnung):'.($this->tageoffen-$this->tageabzurechnen);
 
 		$honorar_offen = $this->honorar_gesamt - $honorar_durchgefuehrt;
 
