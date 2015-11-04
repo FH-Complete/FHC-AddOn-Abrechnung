@@ -597,18 +597,18 @@ class abrechnung extends basis_db
 			{
 				if($row->kostenstelle_id!='')
 				{
-					$this->aufteilung[$row->oe_kurzbz]['betrag']=$row->betrag;
-					$this->aufteilung[$row->oe_kurzbz]['kostenstelle_id']=$row->kostenstelle_id;
+					$this->aufteilung[$row->kostenstelle_id]['betrag']=$row->betrag;
+					$this->aufteilung[$row->kostenstelle_id]['kostenstelle_id']=$row->kostenstelle_id;
 					$gesamtbetrag+=$row->betrag;
 				}
 			}
 
 			if($gesamtbetrag==0)
 				$gesamtbetrag=1;
-			foreach($this->aufteilung as $oe=>$row)
+			foreach($this->aufteilung as $kst=>$row)
 			{
 				$anteil = $row['betrag'] / $gesamtbetrag * 100;
-				$this->aufteilung[$oe]['prozent']=$anteil;
+				$this->aufteilung[$kst]['prozent']=$anteil;
 			}
 		}
 	}
