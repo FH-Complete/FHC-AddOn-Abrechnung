@@ -39,6 +39,26 @@ function alleAbrechnen($abrechnungsmonat)
 		$mitarbeiter = new mitarbeiter();
 		$mitarbeiter->load($username);
 
+		// Wenn der Mitarbeiter noch kein Konto hat wird eines erstellt
+		$konto = new wawi_konto();
+		$konto->getKontoPerson($mitarbeiter->person_id);
+		if(count($konto->result)==0)
+		{
+			$konto = new wawi_konto();
+			$konto->new = true;
+			$konto->aktiv = true;
+			$konto->insertamum = date('Y-m-d H:i:s');
+			$konto->insertvon = 'abrechnungsaddon';
+			$konto->beschreibung['German'] = $mitarbeiter->nachname.' '.$mitarbeiter->vorname;
+			$konto->kurzbz = $mitarbeiter->kurzbz;
+			$konto->person_id = $mitarbeiter->person_id;
+
+			if($konto->save())
+				echo '<br>Neues Konto fuer '.$mitarbeiter->nachname.' '.$mitarbeiter->vorname.' angelegt';
+			else
+				echo '<br><span class="error">Fehler beim Anlegen des Kontos fuer '.$mitarbeiter->nachname.' '.$mitarbeiter->vorname.':'.$konto->errormsg;
+		}
+
 		// BIS-Verwendung laden um Abrechnungszeitraum zu ermitteln
 		if(($verwendung_obj = getVerwendung($username, $abrechnungsdatum))!==false)
 		{
@@ -807,7 +827,13 @@ function showNochNichtAbgerechnet($abrechnungsmonat)
 				echo '<td align="center">'.$db->convert_html_chars($abrechnung_detail->tageausbezahlt).'</td>';
 				echo '<td align="right">'.$db->convert_html_chars(number_format($abrechnung_detail->honorar_gesamt,2,',','.')).'</td>';
 				echo '<td align="right">'.$db->convert_html_chars(number_format($abrechnung_detail->honorar_dgf,2,',','.')).'</td>';
-				echo '<td align="right">'.$db->convert_html_chars(number_format($abrechnung_detail->honorar_offen,2,',','.')).'</td>';
+
+				//Wenn offen > gesamt (zB wegen anwesenheitsabzug)
+				//dann wird gesamt angezeigt
+				if($abrechnung_detail->honorar_offen > $abrechnung_detail->honorar_gesamt)
+					echo '<td align="right">'.$db->convert_html_chars(number_format($abrechnung_detail->honorar_gesamt,2,',','.')).'</td>';
+				else
+					echo '<td align="right">'.$db->convert_html_chars(number_format($abrechnung_detail->honorar_offen,2,',','.')).'</td>';
 			}
 			else
 			{
@@ -818,7 +844,13 @@ function showNochNichtAbgerechnet($abrechnungsmonat)
 				echo '<td align="center" class="bereitsabgerechnet"></td>';
 				echo '<td align="right" class="bereitsabgerechnet">'.$db->convert_html_chars(number_format(($abrechnung_detail->honorar_dgf+$abrechnung_detail->honorar_offen),2,',','.')).'</td>';
 				echo '<td align="right" class="bereitsabgerechnet">'.$db->convert_html_chars(number_format($abrechnung_detail->honorar_dgf,2,',','.')).'</td>';
-				echo '<td align="right" class="bereitsabgerechnet">'.$db->convert_html_chars(number_format($abrechnung_detail->honorar_offen,2,',','.')).'</td>';
+
+				//Wenn offen > gesamt (zB wegen anwesenheitsabzug)
+				//dann wird gesamt angezeigt				
+				if($abrechnung_detail->honorar_offen > $abrechnung_detail->honorar_gesamt)
+					echo '<td align="right" class="bereitsabgerechnet">'.$db->convert_html_chars(number_format($abrechnung_detail->honorar_gesamt,2,',','.')).'</td>';
+				else
+					echo '<td align="right" class="bereitsabgerechnet">'.$db->convert_html_chars(number_format($abrechnung_detail->honorar_offen,2,',','.')).'</td>';
 			}
 		}
 		else
