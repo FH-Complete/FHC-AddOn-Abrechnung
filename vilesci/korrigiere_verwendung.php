@@ -161,7 +161,8 @@ if($result = $db->db_query($qry))
 	}
 }
 echo 'Alle Zuteilungen korrigiert'.PHP_EOL;
-
+echo '<hr>MAIL<hr>';
+echo $mailmessage_html;
 if($mailto!='' && $mailmessage!='')
 {
 	$mailmessage = "Dies ist ein automatisches Mail.\nFolgende Korrekturen wurden an den BIS-Verwendungen vorgenommen:\n\n".$mailmessage;
@@ -195,7 +196,7 @@ function outmessage($mitarbeiter_uid, $message, $lvl)
 			$mailmessage_html .= $mitarbeiter->vorname.' '.$mitarbeiter->nachname.' '.$message.'</br>';
 			break;
 		case 2:
-			$mailmessage_html .= '<span style="color:gray">'.$mitarbeiter->vorname.' '.$mitarbeiter->nachname.' '.$message.'</span><br>';
+			$mailmessage_html .= '<span style="color:gray">'.$mitarbeiter->vorname.' '.$mitarbeiter->nachname.' '.$message.'</span><br>'."\r\n";
 			break;
 		case 3:
 			//$mailmessage_html .= '<span style="color:gray">'.$mitarbeiter->vorname.' '.$mitarbeiter->nachname.' '.$message.'</span><br>';
