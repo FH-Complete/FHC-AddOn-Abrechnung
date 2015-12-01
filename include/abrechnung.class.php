@@ -912,6 +912,7 @@ class abrechnung extends basis_db
 			$this->vertrag_arr[]=$row->vertrag_id;
 		}
 
+		$this->honorar_gesamt = $gesamtbetrag;
 		$this->log.="\n";
 
 		// Anwesenheiten ermitteln
