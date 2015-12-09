@@ -49,8 +49,9 @@ $datum_obj = new datum();
 
 $jahr = mb_substr($abrechnungsmonat, mb_strpos($abrechnungsmonat,'/')+1);
 $monat = mb_substr($abrechnungsmonat,0,mb_strpos($abrechnungsmonat,'/'));
-$abrechnungsdatum=date('Y-m-t',mktime(0,0,0,$monat,1, $jahr));
-$stsem = $stsem_obj->getSemesterFromDatum($abrechnungsdatum);
+$abrechnungsdatum_start=date('Y-m-d',mktime(0,0,0,$monat,1, $jahr));
+$abrechnungsdatum_ende=date('Y-m-t',mktime(0,0,0,$monat,1, $jahr));
+$stsem = $stsem_obj->getSemesterFromDatum($abrechnungsdatum_start);
 $qry = "SELECT
 		tbl_mitarbeiter.personalnummer, tbl_person.vorname, tbl_person.nachname,
 		tbl_person.titelpre, tbl_bisverwendung.dv_art, tbl_bisverwendung.beginn,
@@ -61,8 +62,8 @@ $qry = "SELECT
 		JOIN public.tbl_person USING(person_id)
 		JOIN bis.tbl_bisverwendung USING(mitarbeiter_uid)
 	WHERE
-		tbl_bisverwendung.beginn<=".$db->db_add_param($abrechnungsdatum)."
-		AND tbl_bisverwendung.ende>".$db->db_add_param($abrechnungsdatum);
+		tbl_bisverwendung.beginn<=".$db->db_add_param($abrechnungsdatum_ende)."
+		AND tbl_bisverwendung.ende>=".$db->db_add_param($abrechnungsdatum_start);
 
 if($result = $db->db_query($qry))
 {
