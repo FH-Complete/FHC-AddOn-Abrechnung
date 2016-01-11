@@ -22,7 +22,7 @@
  */
 function alleAbrechnen($abrechnungsmonat)
 {
-
+	global $uid;
 	$abrechnung_user = new abrechnung();
 	$abrechnung_user->loadMitarbeiterUnabgerechnet();
 
@@ -83,6 +83,29 @@ function alleAbrechnen($abrechnungsmonat)
 			else
 			{
 				echo '<br>'.$row_user->vorname.' '.$row_user->nachname.': Dieser Monat wurde bereits abgerechnet';
+			}
+
+			if($abrechnung->abschlussNoetig($username, $abrechnungsdatum, $verwendung_obj))
+			{
+				// Abschluss durchfuehren
+				$abrechnung->abschluss($username, $abrechnungsdatum, $verwendung_obj);
+
+				$abrechnung->loadVertragsAufteilung();
+				if($abrechnung->saveAbrechnung())
+				{
+					// Vertraege auf Abgerechnet setzen
+					foreach($abrechnung->vertrag_arr as $vertrag_id)
+					{
+						$vertrag = new vertrag();
+						$vertrag->vertragsstatus_kurzbz='abgerechnet';
+						$vertrag->vertrag_id = $vertrag_id;
+						$vertrag->uid = $uid;
+						$vertrag->datum = date('Y-m-d');
+						$vertrag->insertvon = $uid;
+						$vertrag->saveVertragsstatus(true);
+					}
+					echo '<br>'.$row_user->vorname.' '.$row_user->nachname.': Sonderzahlungsabschluss wurde durchgefuehrt';
+				}
 			}
 		}
 		else

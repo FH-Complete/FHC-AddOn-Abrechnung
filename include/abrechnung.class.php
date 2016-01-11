@@ -750,6 +750,8 @@ class abrechnung extends basis_db
 	 */
 	public function getAbrechnungsbrutto($mitarbeiter_uid, $vertragsstart, $vertragsende)
 	{
+		$date = DateTime::createFromFormat('Y-m-d', $vertragsende);
+		$monatsletzter = $date->format('Y-m-t');
 		$qry = "SELECT
 					sum(brutto) as brutto
 				FROM
@@ -757,7 +759,7 @@ class abrechnung extends basis_db
 				WHERE
 					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)."
 					AND abrechnungsdatum>=".$this->db_add_param($vertragsstart)."
-					AND abrechnungsdatum<=".$this->db_add_param($vertragsende)."
+					AND abrechnungsdatum<=".$this->db_add_param($monatsletzter)."
 					AND kostenstelle_id IS NULL
 					AND abschluss=false";
 
