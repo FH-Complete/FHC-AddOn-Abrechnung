@@ -735,33 +735,40 @@ function generateVerwendungMitarbeiter($username, $studiensemester_kurzbz=null)
 
 		$endedatum = $stsem_obj->ende;
 
-		$bisverwendung_old = new bisverwendung();
-		$bisverwendung_old->getLastVerwendung($username);
-
-		$bisverwendung = new bisverwendung();
-
-		$bisverwendung->beginn=$startdatum;
-		$bisverwendung->ende=$endedatum;
-		$bisverwendung->ba1code=4; // Freier Dienstvertrag
-		$bisverwendung->ba2code=1; // Befristet
-		$bisverwendung->verwendung_code=1; // Lehr und Forschungspersonal
-		$bisverwendung->mitarbeiter_uid=$username;
-
-		// Die restlichen Daten werden aus einer alten Verwendung geholt
-		$bisverwendung->beschausmasscode = ($bisverwendung_old->beschausmasscode!=''?$bisverwendung_old->beschausmasscode:2); // 0-15
-		$bisverwendung->hauptberufcode = $bisverwendung_old->hauptberufcode;
-		$bisverwendung->hauptberuflich = $bisverwendung_old->hauptberuflich;
-		$bisverwendung->habilitation = $bisverwendung_old->habilitation;
-		$bisverwendung->vertragsstunden = $bisverwendung->vertragsstunden;
-		$bisverwendung->insertamum = date('Y-m-d H:i:s');
-		$bisverwendung->insertvon = $uid;
-
-		if(!$bisverwendung->save(true))
+		if($startdatum<=$endedatum)
 		{
-			return 'Fehlgeschlagen: '.$bisverwendung->errormsg;
+			$bisverwendung_old = new bisverwendung();
+			$bisverwendung_old->getLastVerwendung($username);
+
+			$bisverwendung = new bisverwendung();
+
+			$bisverwendung->beginn=$startdatum;
+			$bisverwendung->ende=$endedatum;
+			$bisverwendung->ba1code=4; // Freier Dienstvertrag
+			$bisverwendung->ba2code=1; // Befristet
+			$bisverwendung->verwendung_code=1; // Lehr und Forschungspersonal
+			$bisverwendung->mitarbeiter_uid=$username;
+
+			// Die restlichen Daten werden aus einer alten Verwendung geholt
+			$bisverwendung->beschausmasscode = ($bisverwendung_old->beschausmasscode!=''?$bisverwendung_old->beschausmasscode:2); // 0-15
+			$bisverwendung->hauptberufcode = $bisverwendung_old->hauptberufcode;
+			$bisverwendung->hauptberuflich = $bisverwendung_old->hauptberuflich;
+			$bisverwendung->habilitation = $bisverwendung_old->habilitation;
+			$bisverwendung->vertragsstunden = $bisverwendung->vertragsstunden;
+			$bisverwendung->insertamum = date('Y-m-d H:i:s');
+			$bisverwendung->insertvon = $uid;
+
+			if(!$bisverwendung->save(true))
+			{
+				return 'Fehlgeschlagen: '.$bisverwendung->errormsg;
+			}
+			else
+				return true;
 		}
 		else
-			return true;
+		{
+			return 'Fehlgeschlagen: Startdatum liegt nach dem Endedatum';
+		}
 	}
 	else
 	{
@@ -869,7 +876,7 @@ function showNochNichtAbgerechnet($abrechnungsmonat)
 				echo '<td align="right" class="bereitsabgerechnet">'.$db->convert_html_chars(number_format($abrechnung_detail->honorar_dgf,2,',','.')).'</td>';
 
 				//Wenn offen > gesamt (zB wegen anwesenheitsabzug)
-				//dann wird gesamt angezeigt				
+				//dann wird gesamt angezeigt
 				if($abrechnung_detail->honorar_offen > $abrechnung_detail->honorar_gesamt)
 					echo '<td align="right" class="bereitsabgerechnet">'.$db->convert_html_chars(number_format($abrechnung_detail->honorar_gesamt,2,',','.')).'</td>';
 				else
