@@ -597,7 +597,11 @@ class abrechnung extends basis_db
 			{
 				if($row->kostenstelle_id!='')
 				{
-					$this->aufteilung[$row->kostenstelle_id]['betrag']=$row->betrag;
+					// Wenn 2 oe_kurzbz auf die selbe Kostentelle abgerechnet werden
+					if(isset($this->aufteilung[$row->kostenstelle_id]['betrag']))
+						$this->aufteilung[$row->kostenstelle_id]['betrag']+=$row->betrag;	
+					else
+						$this->aufteilung[$row->kostenstelle_id]['betrag']=$row->betrag;
 					$this->aufteilung[$row->kostenstelle_id]['kostenstelle_id']=$row->kostenstelle_id;
 					$gesamtbetrag+=$row->betrag;
 				}
