@@ -416,7 +416,7 @@ if($username!='')
 								$vertrag->vertragsstatus_kurzbz='abgerechnet';
 								$vertrag->vertrag_id = $vertrag_id;
 								$vertrag->uid = $uid;
-								$vertrag->datum = date('Y-m-d');
+								$vertrag->datum = date('Y-m-d H:i:s');
 								$vertrag->insertvon = $uid;
 								$vertrag->saveVertragsstatus(true);
 							}
