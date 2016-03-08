@@ -194,7 +194,8 @@ if($result = @$db->db_query("SELECT * FROM information_schema.role_table_grants 
 
 if(!$result = @$db->db_query("SELECT importiert FROM addon.tbl_abrechnung"))
 {
-	$qry = "ALTER TABLE addon.tbl_abrechnung ADD COLUMN importiert boolean DEFAULT false;";
+	$qry = "ALTER TABLE addon.tbl_abrechnung ADD COLUMN importiert boolean DEFAULT false;
+    UPDATE addon.tbl_abrechnung SET importiert=true WHERE kostenstelle_id is null;";
 
 	if(!$db->db_query($qry))
 		echo '<strong>addon.tbl_abrechnung: '.$db->db_last_error().'</strong><br>';
