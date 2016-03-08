@@ -53,6 +53,7 @@ class abrechnung extends basis_db
 	public $honorar_gesamt;
 	public $bmgllsttgl;
 	public $fiktivmonatsbezug;
+	public $importiert=false;
 
     /**
 	 * Konstruktor
@@ -143,6 +144,7 @@ class abrechnung extends basis_db
 				$this->netto = $row->netto;
 				$this->lst_lfd = $row->lst_lfd;
 				$this->log = $row->log;
+				$this->importiert = $this->db_parse_bool($row->importiert);
 
 				return true;
 			}
@@ -599,7 +601,7 @@ class abrechnung extends basis_db
 				{
 					// Wenn 2 oe_kurzbz auf die selbe Kostentelle abgerechnet werden
 					if(isset($this->aufteilung[$row->kostenstelle_id]['betrag']))
-						$this->aufteilung[$row->kostenstelle_id]['betrag']+=$row->betrag;	
+						$this->aufteilung[$row->kostenstelle_id]['betrag']+=$row->betrag;
 					else
 						$this->aufteilung[$row->kostenstelle_id]['betrag']=$row->betrag;
 					$this->aufteilung[$row->kostenstelle_id]['kostenstelle_id']=$row->kostenstelle_id;
@@ -652,7 +654,7 @@ class abrechnung extends basis_db
 
 		$qry = "BEGIN;INSERT INTO addon.tbl_abrechnung(mitarbeiter_uid, kostenstelle_id, konto_id, abrechnungsdatum,
 				sv_lfd, sv_satz, sv_teiler, honorar_dgf, honorar_offen, brutto, netto,
-				lst_lfd, log, abschluss) VALUES(".
+				lst_lfd, log, abschluss, importiert) VALUES(".
 				$this->db_add_param($this->mitarbeiter_uid).',null,'.
 				$this->db_add_param($this->konto_id).','.
 				$this->db_add_param($this->abrechnungsdatum).','.
@@ -665,7 +667,8 @@ class abrechnung extends basis_db
 				$this->db_add_param($this->netto).','.
 				$this->db_add_param($this->lst_lfd).','.
 				$this->db_add_param($this->log).','.
-				$this->db_add_param($this->abschluss, FHC_BOOLEAN).');';
+				$this->db_add_param($this->abschluss, FHC_BOOLEAN).','.
+				$this->db_add_param($this->importiert, FHC_BOOLEAN).');';
 
 		foreach($this->aufteilung as $row)
 		{
@@ -708,7 +711,7 @@ class abrechnung extends basis_db
 		{
 			$qry = "INSERT INTO addon.tbl_abrechnung(mitarbeiter_uid, kostenstelle_id, konto_id, abrechnungsdatum,
 					sv_lfd, sv_satz, sv_teiler, honorar_dgf, honorar_offen, brutto, netto,
-					lst_lfd, log, abschluss) VALUES(".
+					lst_lfd, log, abschluss, importiert) VALUES(".
 					$this->db_add_param($this->mitarbeiter_uid).',null,'.
 					$this->db_add_param($this->konto_id).','.
 					$this->db_add_param($this->abrechnungsdatum).','.
@@ -721,7 +724,8 @@ class abrechnung extends basis_db
 					$this->db_add_param($this->netto).','.
 					$this->db_add_param($this->lst_lfd).','.
 					$this->db_add_param($this->log).','.
-					$this->db_add_param($this->abschluss, FHC_BOOLEAN).');';
+					$this->db_add_param($this->abschluss, FHC_BOOLEAN).','.
+					$this->db_add_param($this->importiert, FHC_BOOLEAN).');';
 		}
 		else
 		{
@@ -739,7 +743,8 @@ class abrechnung extends basis_db
 					' netto='.$this->db_add_param($this->netto).','.
 					' lst_lfd='.$this->db_add_param($this->lst_lfd).','.
 					' log='.$this->db_add_param($this->log).','.
-					' abschluss='.$this->db_add_param($this->abschluss, FHC_BOOLEAN).' '.
+					' abschluss='.$this->db_add_param($this->abschluss, FHC_BOOLEAN).', '.
+					' importiert='.$this->db_add_param($this->importiert, FHC_BOOLEAN).' '.
 					' WHERE abrechnung_id='.$this->db_add_param($this->abrechnung_id, FHC_INTEGER, false);
 		}
 

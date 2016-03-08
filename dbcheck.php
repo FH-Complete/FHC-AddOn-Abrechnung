@@ -192,13 +192,24 @@ if($result = @$db->db_query("SELECT * FROM information_schema.role_table_grants 
 	}
 }
 
+if(!$result = @$db->db_query("SELECT importiert FROM addon.tbl_abrechnung"))
+{
+	$qry = "ALTER TABLE addon.tbl_abrechnung ADD COLUMN importiert boolean DEFAULT false;";
+
+	if(!$db->db_query($qry))
+		echo '<strong>addon.tbl_abrechnung: '.$db->db_last_error().'</strong><br>';
+	else
+		echo ' addon.tbl_abrechnung: Spalte importiert hinzugefuegt!<br>';
+
+}
+
 echo '<br>Aktualisierung abgeschlossen<br><br>';
 echo '<h2>Gegenprüfung</h2>';
 
 
 // Liste der verwendeten Tabellen / Spalten des Addons
 $tabellen=array(
-	"addon.tbl_abrechnung"  => array("abrechnung_id","mitarbeiter_uid","kostenstelle_id","konto_id","abrechnungsdatum","sv_lfd","sv_satz","sv_teiler","honorar_dgf","honorar_offen","brutto","netto","lst_lfd","log","abschluss"),
+	"addon.tbl_abrechnung"  => array("abrechnung_id","mitarbeiter_uid","kostenstelle_id","konto_id","abrechnungsdatum","sv_lfd","sv_satz","sv_teiler","honorar_dgf","honorar_offen","brutto","netto","lst_lfd","log","abschluss","importiert"),
     "addon.tbl_abrechnung_kostenstelle"  => array("abrechnung_kostenstelle_id","studiengang_kz","orgform_kurzbz","sprache","kostenstelle_id"),
 );
 

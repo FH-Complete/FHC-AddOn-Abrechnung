@@ -119,6 +119,7 @@ if(isset($_POST['abrechnungsmonat']))
 					$abrechnung->netto = $netto;
 					$abrechnung->sv_lfd = $svbeitrag;
 					$abrechnung->lst_lfd = $lohnsteuer;
+					$abrechnung->importiert = true;
 					if(!$abrechnung->save())
 					{
 						$anzahl_fehler++;

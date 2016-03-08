@@ -342,31 +342,34 @@ foreach($vertrag->result as $row_vertrag)
     $abrechnung = new abrechnung();
     if($abrechnung->getAbrechnungMitarbeiter($user, $abrechnungsdatum))
     {
-        echo '<h2>'.$p->t('abrechnung/abrechnungsdetails').'</h2>';
+        if($abrechnung->importiert)
+        {
+            echo '<h2>'.$p->t('abrechnung/abrechnungsdetails').'</h2>';
 
-        echo '<table class="tablesorter" style="width:auto">
-            <thead>
-            <tr>
-                <th>'.$p->t('abrechnung/datum').'</th>
-                <th>'.$p->t('abrechnung/brutto').'</th>
-                <th>'.$p->t('abrechnung/svlfd').'</th>
-                <th>'.$p->t('abrechnung/lst').'</th>
-                <th>'.$p->t('abrechnung/netto').'</th>
-                <th>'.$p->t('abrechnung/sonderzahlung').'</th>
-            </tr>
-            </thead>
-            <tbody>';
-        echo '<tr>
-                <td>'.$datum_obj->formatDatum($abrechnungsdatum,'d.m.Y').'</td>
-                <td>'.number_format($abrechnung->brutto,2,',','.').'</td>
-                <td>'.number_format($abrechnung->sv_lfd,2,',','.').'</td>
-                <td>'.number_format($abrechnung->lst_lfd,2,',','.').'</td>
-                <td>'.number_format($abrechnung->netto,2,',','.').'</td>
-                <td>'.number_format($abrechnung->brutto/6,2,',','.').'</td>
-            </tr>
-            </body>
-            </table>
-            ';
+            echo '<table class="tablesorter" style="width:auto">
+                <thead>
+                <tr>
+                    <th>'.$p->t('abrechnung/datum').'</th>
+                    <th>'.$p->t('abrechnung/brutto').'</th>
+                    <th>'.$p->t('abrechnung/svlfd').'</th>
+                    <th>'.$p->t('abrechnung/lst').'</th>
+                    <th>'.$p->t('abrechnung/netto').'</th>
+                    <th>'.$p->t('abrechnung/sonderzahlung').'</th>
+                </tr>
+                </thead>
+                <tbody>';
+            echo '<tr>
+                    <td>'.$datum_obj->formatDatum($abrechnungsdatum,'d.m.Y').'</td>
+                    <td>'.number_format($abrechnung->brutto,2,',','.').'</td>
+                    <td>'.number_format($abrechnung->sv_lfd,2,',','.').'</td>
+                    <td>'.number_format($abrechnung->lst_lfd,2,',','.').'</td>
+                    <td>'.number_format($abrechnung->netto,2,',','.').'</td>
+                    <td>'.number_format($abrechnung->brutto/6,2,',','.').'</td>
+                </tr>
+                </body>
+                </table>
+                ';
+        }
     }
     echo '</td></tr></table>';
 ?>
