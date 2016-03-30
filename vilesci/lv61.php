@@ -55,7 +55,8 @@ $stsem = $stsem_obj->getSemesterFromDatum($abrechnungsdatum_start);
 $qry = "SELECT
 		tbl_mitarbeiter.personalnummer, tbl_person.vorname, tbl_person.nachname,
 		tbl_person.titelpre, tbl_bisverwendung.dv_art, tbl_bisverwendung.beginn,
-		tbl_bisverwendung.ende, tbl_person.svnr, tbl_person.geschlecht, tbl_person.person_id
+		tbl_bisverwendung.ende, tbl_person.svnr, tbl_person.geschlecht, tbl_person.person_id,
+		(SELECT kontakt FROM public.tbl_kontakt WHERE person_id=tbl_person.person_id AND kontakttyp='email' ORDER BY zustellung DESC limit 1) as email
 	FROM
 		public.tbl_mitarbeiter
 		JOIN public.tbl_benutzer ON(uid=mitarbeiter_uid)
@@ -98,7 +99,9 @@ if($result = $db->db_query($qry))
 		'ubahn', // ?? immer 0
 		'dbdz', // ?? immer 0
 		'fibuk', // ?? immer 2
-		'ff8' // ?? immer 2
+		'ff8', // ?? immer 2
+		'email',
+		'pdfpw'
 	),';');
 	while($row = $db->db_fetch_object($result))
 	{
@@ -116,7 +119,8 @@ if($result = $db->db_query($qry))
 				($row->geschlecht=='m'?1:2), $datum_obj->formatDatum($row->beginn,'Ymd'),
 				'', '', 'G', $row->dv_art,
 				$bankverbindung->bic, $bankverbindung->iban,
-				'0','1','0','0','2','2'
+				'0','1','0','0','2','2',
+				$row->email, $row->svnr
 			),';');
 	}
 	fclose($fp);
