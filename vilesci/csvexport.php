@@ -92,6 +92,10 @@ if($result = $db->db_query($qry))
 		if($sonderzahlung)
 			$lohnart=514;
 
+		// Wenn Kostenstelle 800 dann ist die Lohnart 151
+		if($row->kostenstelle_nr=='800')
+			$lohnart = 151;
+
 		//Abrechnungsmonat;Kundenummer;Personalnummer;;Lohnart;;;lfd_brutto;kostenstelle;
 		$fields = array($monat, KUNDENNUMMER, $row->personalnummer,'', $lohnart,'','', number_format($row->brutto,2,',',''), $row->kostenstelle_nr);
 
