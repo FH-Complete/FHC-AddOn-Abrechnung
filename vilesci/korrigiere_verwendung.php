@@ -111,7 +111,7 @@ if($result = $db->db_query($qry))
 					elseif($abrechnung->abrechnungsdatum > $row->beginn)
 					{
 						// Es gab bereits eine Abrechnung vor dem neuen Beginndatum
-						outmessage($row->mitarbeiter_uid, 'Neues Datum liegt vor der letzten Abrechnung -> keine Korrektur',2);
+						outmessage($row->mitarbeiter_uid, 'Neues Datum liegt vor der letzten Abrechnung -> keine Korrektur',1);
 						$error = true;
 					}
 				}
