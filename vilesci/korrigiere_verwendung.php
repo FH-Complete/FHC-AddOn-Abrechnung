@@ -51,7 +51,7 @@ if(php_sapi_name() != 'cli')
 $db = new basis_db();
 
 $stsem = new studiensemester();
-$studiensemester_kurzbz = $stsem->getAktOrNext();
+$studiensemester_kurzbz = $stsem->getaktorNext();
 if(!$stsem->load($studiensemester_kurzbz))
 {
 	die('Fehler beim Laden des Studiensemesters');
