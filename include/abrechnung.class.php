@@ -250,9 +250,12 @@ class abrechnung extends basis_db
 		$this->vertrag_arr=array();
 		foreach($vertrag->result as $row)
 		{
-			$this->log.="\n -> ".$row->bezeichnung.' - € '.$row->betrag.' (ID '.$row->vertrag_id.')';
-			$gesamtbetrag+=$row->betrag;
-			$this->vertrag_arr[]=$row->vertrag_id;
+			if($row->vertragsdatum <= $abrechnungsdatum)
+			{
+				$this->log.="\n -> ".$row->bezeichnung.' - € '.$row->betrag.' (ID '.$row->vertrag_id.')';
+				$gesamtbetrag+=$row->betrag;
+				$this->vertrag_arr[]=$row->vertrag_id;
+			}
 		}
 		$this->log.="\n";
 
@@ -918,9 +921,12 @@ class abrechnung extends basis_db
 
 		foreach($vertrag->result as $row)
 		{
-			$this->log.="\n -> ".$row->bezeichnung.' - € '.$row->betrag.' (ID '.$row->vertrag_id.')';
-			$gesamtbetrag+=$row->betrag;
-			$this->vertrag_arr[]=$row->vertrag_id;
+			if($row->vertragsdatum <= $abrechnungsdatum)
+			{
+				$this->log.="\n -> ".$row->bezeichnung.' - € '.$row->betrag.' (ID '.$row->vertrag_id.')';
+				$gesamtbetrag+=$row->betrag;
+				$this->vertrag_arr[]=$row->vertrag_id;
+			}
 		}
 
 		$this->honorar_gesamt = $gesamtbetrag;

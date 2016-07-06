@@ -897,7 +897,7 @@ function showNochNichtAbgerechnet($abrechnungsmonat)
 /**
  * Zeigt eine Tabelle mit allen offenen Vertraegen
  */
-function printVertragsuebersicht($person_id)
+function printVertragsuebersicht($person_id, $abrechnungsdatum)
 {
 	global $db;
 	$vertrag = new vertrag();
@@ -930,12 +930,15 @@ function printVertragsuebersicht($person_id)
 
 		foreach($vertrag->result as $row)
 		{
-			echo '<tr>';
-			echo '<td>'.$db->convert_html_chars($row->bezeichnung).'</td>';
-			echo '<td align="right">'.$db->convert_html_chars($row->betrag).'</td>';
-			echo '<td align="right">'.$db->convert_html_chars($row->status).'</td>';
-			echo '</tr>';
-			$gesamtbetrag+=$row->betrag;
+			if($row->vertragsdatum <= $abrechnungsdatum)
+			{
+				echo '<tr>';
+				echo '<td>'.$db->convert_html_chars($row->bezeichnung).'</td>';
+				echo '<td align="right">'.$db->convert_html_chars($row->betrag).'</td>';
+				echo '<td align="right">'.$db->convert_html_chars($row->status).'</td>';
+				echo '</tr>';
+				$gesamtbetrag+=$row->betrag;
+			}
 		}
 		echo '</tbody>
 		<tfoot>

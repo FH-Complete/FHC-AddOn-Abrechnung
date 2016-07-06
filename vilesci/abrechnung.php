@@ -319,7 +319,7 @@ if($username!='')
 		}
 
 		// Alle noch nicht abgerechneten Verträge anzeigen
-		printVertragsuebersicht($mitarbeiter->person_id);
+		printVertragsuebersicht($mitarbeiter->person_id, $abrechnungsdatum);
 
 		// BIS-Verwendung laden
 		if(($verwendung_obj = getVerwendung($username, $abrechnungsdatum))!==false)
