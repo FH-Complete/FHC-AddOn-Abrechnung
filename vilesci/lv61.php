@@ -63,7 +63,8 @@ $qry = "SELECT
 		JOIN public.tbl_person USING(person_id)
 		JOIN bis.tbl_bisverwendung USING(mitarbeiter_uid)
 	WHERE
-		tbl_bisverwendung.beginn<=".$db->db_add_param($abrechnungsdatum_ende)."
+		NOT fixangestellt
+		AND tbl_bisverwendung.beginn<=".$db->db_add_param($abrechnungsdatum_ende)."
 		AND tbl_bisverwendung.ende>=".$db->db_add_param($abrechnungsdatum_start);
 
 if($result = $db->db_query($qry))
