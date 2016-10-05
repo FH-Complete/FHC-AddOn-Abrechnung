@@ -577,7 +577,8 @@ function generateVerwendung($studiensemester_kurzbz)
 				JOIN public.tbl_benutzer USING(person_id)
 				JOIN public.tbl_mitarbeiter ON(uid=mitarbeiter_uid)
 			WHERE
-				NOT EXISTS(SELECT 1 FROM lehre.tbl_vertrag_vertragsstatus
+				tbl_vertrag.vertragstyp_kurzbz='Lehrauftrag'
+				AND NOT EXISTS(SELECT 1 FROM lehre.tbl_vertrag_vertragsstatus
 					WHERE vertrag_id=tbl_vertrag.vertrag_id AND vertragsstatus_kurzbz in('abgerechnet','storno'))
 				AND NOT EXISTS(SELECT 1 FROM bis.tbl_bisverwendung WHERE mitarbeiter_uid=tbl_mitarbeiter.mitarbeiter_uid
 					AND beginn>=".$db->db_add_param($studiensemester->start)."
