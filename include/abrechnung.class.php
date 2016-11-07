@@ -507,6 +507,11 @@ class abrechnung extends basis_db
 				// 1. Monat
 				// hier wird immer bis zum tatsaechlichen Monatsende gerechnet nicht bis zum 30. zB im Feb. bis 28.
 				$gesamttage+=$letzterTagimMonat-$tag+1;
+                                
+                                	if ($gesamttage > 30)
+                                        	$gesamttage = 30;
+
+                                
 			}
 			elseif($dtvertragsendedatum->format('m')==$datum->format('m') && $dtendedatum->format('m')==$datum->format('m'))
 			{
