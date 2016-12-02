@@ -392,7 +392,9 @@ class abrechnung extends basis_db
 			$this->log.="\nDV-Art=200 : +0.05";
 			$this->sv_satz+=0.05;
 		}
-
+                
+                $this->sv_teiler = $this->tageabzurechnen;
+                
 		if($this->fiktivmonatsbezug<SV_GERINGWERTIG)
 		{
 			$this->log.="\nFiktivmonatsbezug < ".SV_GERINGWERTIG.": SV-Satz=0";
@@ -402,10 +404,13 @@ class abrechnung extends basis_db
 		{
 			// Im November werden 10 Tage hinzugefuegt wenn nicht geringwertig
 			$this->log.="\nAbrechnungsmonat=11 : Tage abzurechnen + 10";
-			$this->tageabzurechnen+=10;
+			$this->sv_teiler+=10;
 		}
-
-		$this->sv_teiler = $this->tageabzurechnen;
+                
+		
+                
+                
+                
 		$this->log.="\n--------------------------------------------------";
 		$this->log.="\n-> SV-Satz:".$this->sv_satz;
 		$this->log.="\n";
@@ -416,7 +421,7 @@ class abrechnung extends basis_db
 			$this->fiktivmonatsbezug = SV_HOECHSTBEMESSUNGSGRUNDLAGE;
 		}
 
-		$this->sv_lfd = $this->sv_satz * $this->fiktivmonatsbezug / 30 * $this->tageabzurechnen;
+		$this->sv_lfd = $this->sv_satz * $this->fiktivmonatsbezug / 30 * $this->sv_teiler;
 		$this->log.="\nLfd SV (SV-Satz * Fiktivmonatsbezug / 30 * Tage abzurechnen): ".number_format($this->sv_lfd,2);
 
 		// BMGL Lohnsteuer
