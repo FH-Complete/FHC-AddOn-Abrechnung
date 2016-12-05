@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /* Copyright (C) 2014 fhcomplete.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -443,7 +443,8 @@ class abrechnung extends basis_db
 			if($this->bmgllsttgl<=$row[0])
 			{
 				$this->log.="\nBMGL Lst. tgl. <=".$row[0]." -> ".$row[1];
-				$this->lst_tgl = $row[1];
+				// $this->lst_tgl = $row[1];
+				eval('$this->lst_tgl = '.$this->bmgllsttgl.'*'.$row[1].';');
 				break;
 			}
 		}

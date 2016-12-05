@@ -3,10 +3,10 @@
 define('KUNDENNUMMER','000');
 
 // Hoechstbemessungsgrundlage
-define('SV_HOECHSTBEMESSUNGSGRUNDLAGE',4440);
+define('SV_HOECHSTBEMESSUNGSGRUNDLAGE',4860);
 
 // Geringwertigkeitsgrenze
-define('SV_GERINGWERTIG',386.80);
+define('SV_GERINGWERTIG',415.72);
 
 // Standard SV-Satz
 define('SV_SATZ',0.1812);
@@ -16,16 +16,19 @@ $cfg_sv_altersabschlag = array(56,0.03);
 
 // Untergrenzen fuer abschlaege. Muss aufsteigend sortiert sein
 $cfg_sv_abschlaege = array(
-	array(1219,0.03),
-	array(1330,0.02),
-	array(1497,0.01)
+	array(1311,0.03),
+	array(1430,0.02),
+	array(1609,0.01)
 );
 
 // Untergrenzen fuer Berechnung der Lohnsteuer taeglich
 $cfg_lsttgl = array(
-	array(33.71,0.00),
-	array(69.98,0.365-0.05/30),
-	array(166.67,0.4321429+13.23),
-	array(99999999,0.5+55.02)
+	array(35.53,'0.00'),
+	array(50.53,'0.25-8.883'),
+	array(86.64,'0.35-13.937'),
+	array(167.20,'0.42-20.002'),
+	array(250.53,'0.48-30.034'),
+	array(2778.31,'0.5-35.044'),
+	array(99999999,'0.55-173.96')
 );
 
