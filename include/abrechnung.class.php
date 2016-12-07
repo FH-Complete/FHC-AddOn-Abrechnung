@@ -519,7 +519,7 @@ class abrechnung extends basis_db
 
                                 
 			}
-			elseif($dtvertragsendedatum->format('m')==$datum->format('m') && $dtendedatum->format('m')==$datum->format('m'))
+			elseif($dtvertragsendedatum->format('m')==$datum->format('m') && $dtendedatum->format('m')==$datum->format('m') && $dtstartdatum->format('m') != $datum->format('m')) 
 			{
 				// Letzter Monat
 				// hier werden einfach die Tage des Monats dazugerechnet
@@ -530,6 +530,15 @@ class abrechnung extends basis_db
 				else
 					$gesamttage+=$dtendedatum->format('d');
 			}
+                        elseif($dtvertragsendedatum->format('m')==$datum->format('m') && $dtendedatum->format('m')==$datum->format('m') && $dtstartdatum->format('m') == $datum->format('m')) 
+			{
+				// Letzter Monat = erster Monat
+				// hier werden einfach die Tage des Monats dazugerechnet
+				// Das trifft aber nur zu wenn es das Monat des Vertragsendes ist. Ansonsten wird das volle Monat gerechnet
+				// da sonst die berechnung der bereits abgerechneten Tage nicht korrekt ist.
+				$gesamttage=$dtendedatum->format('d')-$datum->format('d') + 1;
+                                
+			}                                                
 			else
 			{
 				// Zwischenmonat

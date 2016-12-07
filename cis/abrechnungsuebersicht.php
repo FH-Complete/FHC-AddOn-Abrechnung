@@ -280,7 +280,7 @@ foreach($vertrag->result as $row_vertrag)
 			}
 			else
 			{
-				// Sonderhonorar zB Pruefung
+				// Sonderhonorar zB Pruefung                            
 				$sonderhonorar[]=array('bezeichnung'=>$row_vertrag->bezeichnung,
 					'gesamt'=>$row_vertrag->betrag,
 					'datum'=>$row_vertrag->vertragsdatum);
