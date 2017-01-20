@@ -46,9 +46,9 @@ $abrechnungsmonat = (isset($_REQUEST['abrechnungsmonat'])?$_REQUEST['abrechnungs
 
 $sonderzahlung = (isset($_REQUEST['sz'])?true:false);
 
-$jahr = mb_substr($abrechnungsmonat, mb_strpos($abrechnungsmonat,'/')+1);
-$monat = mb_substr($abrechnungsmonat,0,mb_strpos($abrechnungsmonat,'/'));
-$abrechnungsdatum=date('Y-m-t',mktime(0,0,0,$monat,1, $jahr));
+$abrechnungsdatum = $abrechnungsmonat;
+$dtabrechnung = new DateTime($abrechnungsdatum);
+$monat = $dtabrechnung->format('m');
 $stsem = $stsem_obj->getSemesterFromDatum($abrechnungsdatum);
 $qry = "SELECT
 		tbl_mitarbeiter.personalnummer, tbl_abrechnung.mitarbeiter_uid, tbl_abrechnung.brutto, tbl_kostenstelle.kostenstelle_nr
@@ -63,10 +63,11 @@ if($sonderzahlung)
 else
 	$qry.=" AND abschluss=false";
 $qry.=" ORDER BY personalnummer";
+
 if($result = $db->db_query($qry))
 {
 	header( 'Content-Type: text/csv' );
-    header( 'Content-Disposition: attachment;filename=abrechnung'.$jahr.'_'.$monat.'.csv');
+    header( 'Content-Disposition: attachment;filename=abrechnung'.$abrechnungsdatum.'.csv');
 
 	$fp = fopen('php://output', 'w');
 

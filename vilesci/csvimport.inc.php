@@ -29,11 +29,7 @@ if (count(get_included_files()) == 1)
 
 $stsem_obj = new studiensemester();
 
-$abrechnungsmonat = (isset($_REQUEST['abrechnungsmonat'])?$_REQUEST['abrechnungsmonat']:((date('m')-1).'/'.date('Y')));
-$jahr = mb_substr($abrechnungsmonat, mb_strpos($abrechnungsmonat,'/')+1);
-$monat = mb_substr($abrechnungsmonat,0,mb_strpos($abrechnungsmonat,'/'));
-$abrechnungsdatum=date('Y-m-t',mktime(0,0,0,$monat,1, $jahr));
-$stsem = $stsem_obj->getSemesterFromDatum($abrechnungsdatum);
+$abrechnungsdatum = (isset($_REQUEST['abrechnungsmonat'])?$_REQUEST['abrechnungsmonat']:'');
 
 echo '
 <h1 class="page-header">CSV - Import</h1>';
@@ -41,24 +37,37 @@ echo '<form action="abrechnung.php?work=csvimport" method="POST" enctype="multip
 Bitte wählen Sie die CSV Datei für den Import aus:
 <input type="file" name="csvdatei" />';
 
-echo 'Abrechnungsmonat: <select name="abrechnungsmonat">';
-
 $jahr = date('Y');
 $monat = date('m');
 $dtnow = new DateTime();
 $dtago = $dtnow->sub(new DateInterval('P1M'));
+$abrechnungsdatum_prev = $dtago->format('Y-m-t');
+
+echo 'Abrechnungsmonat: <select name="abrechnungsmonat">';
+$abrechnungsdatum_next = getNextAbrechnungsdatum($abrechnungsdatum_prev);
+$dtnext = new DateTime($abrechnungsdatum_next);
+if($dtnext<=$dtnow)
+{
+	$abrechnungsdatum_prev = $abrechnungsdatum_next;
+}
+
+if($abrechnungsdatum=='')
+	$abrechnungsdatum = $abrechnungsdatum_prev;
+$stsem = $stsem_obj->getSemesterFromDatum($abrechnungsdatum);
 
 for($i=1;$i<=3;$i++)
 {
-	$value = $dtago->format('m/Y');
+	$value = $abrechnungsdatum_prev;
+	$dt_date=new DateTime($abrechnungsdatum_prev);
+	//$value = $dtago->format('m/Y');
 	if(($value==$abrechnungsmonat && !is_null($abrechnungsmonat))
 	|| ((is_null($abrechnungsmonat) || $abrechnungsmonat=='') && $i==3))
 		$selected='selected';
 	else
 		$selected='';
-
-	echo '<option value="'.$value.'" '.$selected.'>'.$monatsname[1][$dtago->format('n')-1].' '.$dtago->format('Y').'</option>'; //$monatsname[1][$i-1]
-	$dtago->sub(new DateInterval('P1M'));
+	$bezeichnung = $monatsname[1][$dt_date->format('n')-1].' '.$dt_date->format('Y').' ('.$value.')';
+	echo '<option value="'.$value.'" '.$selected.'>'.$bezeichnung.'</option>';
+	$abrechnungsdatum_prev = getPrevAbrechnungsdatum($abrechnungsdatum_prev);
 }
 
 echo '</select>';

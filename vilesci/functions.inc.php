@@ -26,9 +26,7 @@ function alleAbrechnen($abrechnungsmonat)
 	$abrechnung_user = new abrechnung();
 	$abrechnung_user->loadMitarbeiterUnabgerechnet();
 
-	$jahr = mb_substr($abrechnungsmonat, mb_strpos($abrechnungsmonat,'/')+1);
-	$monat = mb_substr($abrechnungsmonat,0,mb_strpos($abrechnungsmonat,'/'));
-	$abrechnungsdatum=date('Y-m-t',mktime(0,0,0,$monat,1, $jahr));
+	$abrechnungsdatum = $abrechnungsmonat;
 
 	foreach($abrechnung_user->result as $row_user)
 	{
@@ -263,14 +261,40 @@ function printAbrechnungsmonatDropDown($abrechnungsmonat=null)
 
 	for($i=1;$i<=12;$i++)
 	{
-		$value = $dtago->format('m/Y');
+
+		$monatsende = $dtago->format('Y-m-t');
+		$monatsbeginn = $dtago->format('Y-m-01');
+		// Faellt in dieses Monat ein Semesterwechsel, dann muss 2x abgerechnet werden
+		// Wenn das Studiensemester in diesem Monat endet, dann wird 2x abgerechnet
+		$stsem = new studiensemester();
+		$stsem_beginn = $stsem->getSemesterFromDatum($monatsbeginn);
+		$stsem_ende = $stsem->getSemesterFromDatum($monatsende);
+		$bezeichnung='';
+
+		if($stsem_ende!=$stsem_beginn && $stsem_ende!='' && $stsem_beginn!='')
+		{
+			$stsem->load($stsem_beginn);
+
+			$value = $stsem->ende;
+			if(($value==$abrechnungsmonat && !is_null($abrechnungsmonat))
+			|| ((is_null($abrechnungsmonat) || $abrechnungsmonat=='') && $i==6))
+				$selected='selected';
+			else
+				$selected='';
+			$bezeichnung = $monatsname[1][$dtago->format('n')-1].' '.$dtago->format('Y').' ('.$value.')';
+			echo '<option value="'.$value.'" '.$selected.'>'.$bezeichnung.'</option>';
+		}
+
+
+		$value = $dtago->format('Y-m-t');
 		if(($value==$abrechnungsmonat && !is_null($abrechnungsmonat))
 		|| ((is_null($abrechnungsmonat) || $abrechnungsmonat=='') && $i==6))
 			$selected='selected';
 		else
 			$selected='';
 
-		echo '<option value="'.$value.'" '.$selected.'>'.$monatsname[1][$dtago->format('n')-1].' '.$dtago->format('Y').'</option>'; //$monatsname[1][$i-1]
+		$bezeichnung = $monatsname[1][$dtago->format('n')-1].' '.$dtago->format('Y').' ('.$value.')';
+		echo '<option value="'.$value.'" '.$selected.'>'.$bezeichnung.'</option>';
 		$dtago->add(new DateInterval('P1M'));
 	}
 
@@ -828,9 +852,8 @@ function showNochNichtAbgerechnet($abrechnungsmonat)
 			<th>Bisher ausbezahlt</th>
 			<th>Offen</th>
 		</thead><tbody>';
-	$jahr = mb_substr($abrechnungsmonat, mb_strpos($abrechnungsmonat,'/')+1);
-	$monat = mb_substr($abrechnungsmonat,0,mb_strpos($abrechnungsmonat,'/'));
-	$abrechnungsdatum=date('Y-m-t',mktime(0,0,0,$monat,1, $jahr));
+
+	$abrechnungsdatum = $abrechnungsmonat;
 
 	$datum_obj = new datum();
 
@@ -977,5 +1000,49 @@ function getVerwendung($username, $abrechnungsdatum)
 	}
 	else
 		return false;
+}
+
+function getNextAbrechnungsdatum($abrechnungsdatum)
+{
+	// 1 Tag dazurechnen. Letzten des Monats holen und schauen ob es noch das selbe stsem ist
+	// wenn ja, dann ist es das neue Abrechnungsdatum, wenn nicht dann ist das abrechnungsdatum das ende des vorherigen stsem
+	$datum = new DateTime($abrechnungsdatum);
+	$dtneu = $datum->add(new DateInterval('P1D'));
+	$abrechnungsdatum_neu = $dtneu->format('Y-m-d');
+	$abrechnungsdatum_neu_monatsende = $dtneu->format('Y-m-t');
+
+	$stsem = new studiensemester();
+	$stsem_neu = $stsem->getSemesterFromDatum($abrechnungsdatum_neu);
+	$stsem_neu_monatsende = $stsem->getSemesterFromDatum($abrechnungsdatum_neu_monatsende);
+
+	if($stsem_neu!=$stsem_neu_monatsende)
+	{
+		$stsem->load($stsem_neu);
+		return $stsem->ende;
+	}
+	else
+		return $abrechnungsdatum_neu_monatsende;
+}
+function getPrevAbrechnungsdatum($abrechnungsdatum)
+{
+	// Aktuellen Tage abziehen, Pruefen ob das Studiensemester des neuen Datums das selbe ist wie das des alten
+	// wenn das Stsem gleich ist dann ist das Datum das neue Abrechnungsdatum
+	// wenn es unterschiedlich ist, dann ist das Semesterende das neue Abrechnungsdatum
+
+	$datum = new DateTime($abrechnungsdatum);
+	$dtalt = $datum->sub(new DateInterval('P'.$datum->format('d').'D'));
+
+	$abrechnungsdatum_neu = $dtalt->format('Y-m-d');
+	$stsem = new studiensemester();
+	$stsem_prev = $stsem->getSemesterFromDatum($abrechnungsdatum_neu);
+	$stsem_aktuell = $stsem->getSemesterFromDatum($abrechnungsdatum);
+
+	if($stsem_prev!=$stsem_aktuell && $stsem_prev!='' && $stsem_aktuell!='')
+	{
+		$stsem->load($stsem_prev);
+		return $stsem->ende;
+	}
+	else
+		return $abrechnungsdatum_neu;
 }
 ?>

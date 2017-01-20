@@ -32,6 +32,7 @@ require_once('../../../include/datum.class.php');
 require_once('../../../include/studiensemester.class.php');
 require_once('../../../include/bankverbindung.class.php');
 require_once('../../../include/adresse.class.php');
+require_once('functions.inc.php');
 
 $uid = get_uid();
 
@@ -44,14 +45,29 @@ if(!$rechte->isBerechtigt('addon/abrechnung'))
 $db = new basis_db();
 $stsem_obj = new studiensemester();
 
-$abrechnungsmonat = (isset($_REQUEST['abrechnungsmonat'])?$_REQUEST['abrechnungsmonat']:((date('m')-1).'/'.date('Y')));
+$abrechnungsmonat = (isset($_REQUEST['abrechnungsmonat'])?$_REQUEST['abrechnungsmonat']:'');
 $datum_obj = new datum();
 
-$jahr = mb_substr($abrechnungsmonat, mb_strpos($abrechnungsmonat,'/')+1);
-$monat = mb_substr($abrechnungsmonat,0,mb_strpos($abrechnungsmonat,'/'));
-$abrechnungsdatum_start=date('Y-m-d',mktime(0,0,0,$monat,1, $jahr));
-$abrechnungsdatum_ende=date('Y-m-t',mktime(0,0,0,$monat,1, $jahr));
-$stsem = $stsem_obj->getSemesterFromDatum($abrechnungsdatum_start);
+$abrechnungsdatum_ende=$abrechnungsmonat;
+
+// Vorheriges Abrechnungsdatum holen
+// 1 Tag dazuzaehlen
+$abrechnungsdatum_prev = getPrevAbrechnungsdatum($abrechnungsdatum_ende);
+$dt_prev = new DateTime($abrechnungsdatum_prev);
+$dt_prev->add(new DateInterval('P1D'));
+$abrechnungsdatum_start = $dt_prev->format('Y-m-d');
+$monat = $dt_prev->format('m');
+$jahr = $dt_prev->format('Y');
+// Wenn das Datum im selben Studiensemester ist, dann wird dieses genommen, ansonsten der start des Studiensemesters
+$stsem_obj = new studiensemester();
+$stsem_start = $stsem_obj->getSemesterFromDatum($abrechnungsdatum_start);
+$stsem_ende = $stsem_obj->getSemesterFromDatum($abrechnungsdatum_ende);
+if($stsem_start!=$stsem_ende)
+{
+	$stsem_obj->load($stsem_ende);
+	$abrechnungsdatum_start = $stsem->beginn;
+}
+
 $qry = "SELECT
 		tbl_mitarbeiter.personalnummer, tbl_person.vorname, tbl_person.nachname,
 		tbl_person.titelpre, tbl_bisverwendung.dv_art, tbl_bisverwendung.beginn,
@@ -70,7 +86,7 @@ $qry = "SELECT
 if($result = $db->db_query($qry))
 {
 	header( 'Content-Type: text/csv' );
-    header( 'Content-Disposition: attachment;filename=lv61_'.$jahr.'_'.$monat.'.csv');
+	header( 'Content-Disposition: attachment;filename=lv61_'.$jahr.'_'.$monat.'_'.$abrechnungsdatum_ende.'.csv');
 
 	$fp = fopen('php://output', 'w');
 

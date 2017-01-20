@@ -55,10 +55,9 @@ if(isset($_REQUEST['abrechnungsmonat']))
 	$abrechnungsmonat = $_REQUEST['abrechnungsmonat'];
 else
 {
-	if(date('m')==1)
-		$abrechnungsmonat = ('12/'.(date('Y')-1));
-	else
-		$abrechnungsmonat = (sprintf('%02s',(date('m')-1)).'/'.date('Y'));
+	$dtnow = new DateTime();
+	$dtago = $dtnow->sub(new DateInterval('P1M'));
+	$abrechnungsmonat = $dtago->format('Y-m-t');;
 }
 
 $studiensemester_kurzbz = (isset($_GET['studiensemester_kurzbz'])?$_GET['studiensemester_kurzbz']:null);
@@ -284,24 +283,17 @@ if($username!='')
 	{
 		// Monatsabrechnung anzeigen
 		echo '<h1 class="page-header">Abrechnung</h1>';
-		$jahr = mb_substr($abrechnungsmonat, mb_strpos($abrechnungsmonat,'/')+1);
-		$monat = mb_substr($abrechnungsmonat,0,mb_strpos($abrechnungsmonat,'/'));
-		$abrechnungsdatum=date('Y-m-t',mktime(0,0,0,$monat,1, $jahr));
+		$abrechnungsdatum = $abrechnungsmonat;
 
-		if($monat==12)
-			$next = '1/'.($jahr+1);
-		else
-			$next = ($monat+1).'/'.$jahr;
-
-		if($monat==1)
-			$prev = '12/'.($jahr-1);
-		else
-			$prev = ($monat-1).'/'.$jahr;
+		$next = getNextAbrechnungsdatum($abrechnungsdatum);
+		$prev = getPrevAbrechnungsdatum($abrechnungsdatum);
 
 		echo '<div class="pull-left"><a href="abrechnung.php?username='.$username.'&abrechnungsmonat='.$prev.'">&lt;&lt; vorheriges Monat</a></div>';
 		echo '<div class="pull-right"><a href="abrechnung.php?username='.$username.'&abrechnungsmonat='.$next.'">nächstes Monat &gt;&gt;</a></div><br>';
 
-		echo ' Abrechnungsmonat: '.$monatsname[1][$monat-1].' '.$jahr;
+		$dtabrechnung = new DateTime($abrechnungsmonat);
+		$bezeichnung = $monatsname[1][$dtabrechnung->format('n')-1].' '.$dtabrechnung->format('Y').' ('.$abrechnungsmonat.')';
+		echo ' Abrechnungsmonat: '.$bezeichnung;
 
 		if($work=='generateVerwendung')
 		{
