@@ -245,7 +245,7 @@ class abrechnung extends basis_db
 		}
 
 		$vertrag = new vertrag();
-		$vertrag->loadVertrag($mitarbeiter->person_id, false);
+		$vertrag->loadVertrag($mitarbeiter->person_id, false, $abrechnungsdatum);
 		$gesamtbetrag=0;
 		$this->vertrag_arr=array();
 		foreach($vertrag->result as $row)
@@ -927,7 +927,7 @@ class abrechnung extends basis_db
 		}
 
 		$vertrag = new vertrag();
-		$vertrag->loadVertrag($mitarbeiter->person_id, false);
+		$vertrag->loadVertrag($mitarbeiter->person_id, false, $abrechnungsdatum);
 		$gesamtbetrag=0;
 		$this->vertrag_arr=array();
 		$this->log.="Verträge die abgerechnet werden:";

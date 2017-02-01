@@ -116,7 +116,7 @@ function alleAbrechnen($abrechnungsmonat)
 /**
  * Berechnet das Datum an dem die Person angemeldet werden soll
  */
-function getVertragsStartDatum($person_id)
+function getVertragsStartDatum($person_id, $studiensemester_kurzbz)
 {
 	global $db;
 
@@ -131,8 +131,10 @@ function getVertragsStartDatum($person_id)
 				FROM
 					lehre.tbl_vertrag
 					JOIN lehre.tbl_lehreinheitmitarbeiter USING(vertrag_id)
+					JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
 				WHERE
 					tbl_vertrag.person_id=".$db->db_add_param($person_id, FHC_INTEGER)."
+					AND studiensemester_kurzbz=".$db->db_add_param($studiensemester_kurzbz)."
 					AND NOT EXISTS(SELECT 1 FROM lehre.tbl_vertrag_vertragsstatus WHERE vertrag_id=tbl_vertrag.vertrag_id AND vertragsstatus_kurzbz in('abgerechnet','storno'))
 			)
 			ORDER BY datum LIMIT 1";
@@ -658,7 +660,8 @@ function showFehlendeVerwendung($studiensemester_kurzbz)
 					JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
 					JOIN lehre.tbl_lehreinheitmitarbeiter USING(lehreinheit_id)
 				WHERE
-					tbl_lehreinheitmitarbeiter.vertrag_id=a.vertrag_id) as startdatum
+					tbl_lehreinheitmitarbeiter.vertrag_id=a.vertrag_id
+					AND studiensemester_kurzbz=".$db->db_add_param($studiensemester_kurzbz).") as startdatum
 				FROM
 					(
 						SELECT
@@ -746,7 +749,7 @@ function generateVerwendungMitarbeiter($username, $studiensemester_kurzbz=null)
 	if(!$mitarbeiter->load($username))
 		return $mitarbeiter->errormsg;
 
-	$startdatum = getVertragsStartDatum($mitarbeiter->person_id);
+	$startdatum = getVertragsStartDatum($mitarbeiter->person_id, $studiensemester_kurzbz);
 
 	$stsem_obj = new studiensemester();
 
@@ -925,7 +928,7 @@ function printVertragsuebersicht($person_id, $abrechnungsdatum)
 {
 	global $db;
 	$vertrag = new vertrag();
-	$vertrag->loadVertrag($person_id, false);
+	$vertrag->loadVertrag($person_id, false, $abrechnungsdatum);
 
 	if(count($vertrag->result)>0)
 	{
