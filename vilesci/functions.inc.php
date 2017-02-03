@@ -604,6 +604,9 @@ function generateVerwendung($studiensemester_kurzbz)
 				JOIN public.tbl_mitarbeiter ON(uid=mitarbeiter_uid)
 			WHERE
 				tbl_vertrag.vertragstyp_kurzbz='Lehrauftrag'
+				AND EXISTS(SELECT 1 FROM lehre.tbl_lehreinheit JOIN lehre.tbl_lehreinheitmitarbeiter USING(lehreinheit_id)
+				 	WHERE tbl_lehreinheitmitarbeiter.vertrag_id=tbl_vertrag.vertrag_id
+					AND tbl_lehreinheit.studiensemester_kurzbz=".$db->db_add_param($studiensemester_kurzbz).")
 				AND NOT EXISTS(SELECT 1 FROM lehre.tbl_vertrag_vertragsstatus
 					WHERE vertrag_id=tbl_vertrag.vertrag_id AND vertragsstatus_kurzbz in('abgerechnet','storno'))
 				AND NOT EXISTS(SELECT 1 FROM bis.tbl_bisverwendung WHERE mitarbeiter_uid=tbl_mitarbeiter.mitarbeiter_uid
@@ -676,6 +679,8 @@ function showFehlendeVerwendung($studiensemester_kurzbz)
 						WHERE
 							NOT EXISTS(SELECT 1 FROM lehre.tbl_vertrag_vertragsstatus
 							WHERE vertrag_id=tbl_vertrag.vertrag_id AND vertragsstatus_kurzbz in('abgerechnet','storno'))
+							AND EXISTS(SELECT 1 FROM lehre.tbl_lehreinheitmitarbeiter JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
+								WHERE vertrag_id=tbl_vertrag.vertrag_id AND studiensemester_kurzbz=".$db->db_add_param($studiensemester_kurzbz).")
 							AND NOT EXISTS(SELECT 1 FROM bis.tbl_bisverwendung WHERE mitarbeiter_uid=tbl_mitarbeiter.mitarbeiter_uid
 							AND beginn>=".$db->db_add_param($studiensemester->start)."
 							AND ende<=".$db->db_add_param($studiensemester->ende)."
