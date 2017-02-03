@@ -65,7 +65,7 @@ $stsem_ende = $stsem_obj->getSemesterFromDatum($abrechnungsdatum_ende);
 if($stsem_start!=$stsem_ende)
 {
 	$stsem_obj->load($stsem_ende);
-	$abrechnungsdatum_start = $stsem->beginn;
+	$abrechnungsdatum_start = $stsem_obj->start;
 }
 
 $qry = "SELECT
