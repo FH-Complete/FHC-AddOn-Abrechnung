@@ -79,6 +79,12 @@ if($studiensemester_kurzbz!='')
 				JOIN bis.tbl_bisverwendung ON(uid=mitarbeiter_uid)
 			WHERE
 				NOT EXISTS(SELECT * FROM lehre.tbl_vertrag_vertragsstatus WHERE vertrag_id=tbl_vertrag.vertrag_id AND vertragsstatus_kurzbz in ('storno','abgerechnet'))
+				AND EXISTS(SELECT 1 FROM lehre.tbl_lehreinheit JOIN lehre.tbl_lehreinheitmitarbeiter USING(lehreinheit_id)
+					WHERE
+						tbl_lehreinheitmitarbeiter.mitarbeiter_uid=vw_mitarbeiter.uid
+						AND tbl_lehreinheitmitarbeiter.vertrag_id=tbl_vertrag.vertrag_id
+						AND tbl_lehreinheit.studiensemester_kurzbz=".$db->db_add_param($studiensemester_kurzbz)."
+						)
 				AND (tbl_bisverwendung.beginn is null
 					OR (tbl_bisverwendung.beginn>=".$db->db_add_param($start)." AND tbl_bisverwendung.beginn<=".$db->db_add_param($ende)."))
 				AND vw_mitarbeiter.fixangestellt=false
