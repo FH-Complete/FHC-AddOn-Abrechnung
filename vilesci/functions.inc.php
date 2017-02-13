@@ -996,7 +996,9 @@ function getVerwendung($username, $abrechnungsdatum)
 		{
 			foreach($bisverwendung->result as $row)
 			{
-				if($row->beginn!='' && $row->ende!='' && in_array($row->verwendung_code,array(1,2)))
+				$prevDatum = getPrevAbrechnungsdatum($abrechnungsdatum);
+				if($row->beginn!='' && $row->ende!='' && in_array($row->verwendung_code,array(1,2))
+					&& $row->ende>$prevDatum)
 				{
 					return $row;
 				}

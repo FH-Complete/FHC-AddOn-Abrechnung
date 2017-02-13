@@ -257,7 +257,6 @@ class abrechnung extends basis_db
 				$this->vertrag_arr[]=$row->vertrag_id;
 			}
 		}
-		$this->log.="\n";
 
 		$this->mitarbeiter_uid = $username;
 		$startdatum = $verwendung_obj->beginn;
@@ -393,7 +392,7 @@ class abrechnung extends basis_db
 			$this->sv_satz+=0.05;
 		}
 
-                $this->sv_teiler = $this->tageabzurechnen;
+		$this->sv_teiler = $this->tageabzurechnen;
 
 		if($this->fiktivmonatsbezug<SV_GERINGWERTIG)
 		{
@@ -433,6 +432,8 @@ class abrechnung extends basis_db
 		else
 			$this->log.="\nTage abzurechnen = 0!! BMGL Lst. tgl. kann nicht berechnet werden";
 
+		if($this->bmgllsttgl=='')
+			$this->bmgllsttgl=0;
 		// LSt. taeglich:
 		foreach($cfg_lsttgl as $row)
 		{
