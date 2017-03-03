@@ -186,7 +186,8 @@ foreach($stunde->stunden as $row)
 }
 
 $vertrag = new vertrag();
-$vertrag->getVertragFromDatum($mitarbeiter->uid, $abrechnungsdatum);
+//$vertrag->getVertragFromDatum($mitarbeiter->uid, $abrechnungsdatum);
+$vertrag->loadVertrag($mitarbeiter->person_id, null, $abrechnungsdatum);
 
 $sonderhonorar=array();
 $lehrauftrag=array();
