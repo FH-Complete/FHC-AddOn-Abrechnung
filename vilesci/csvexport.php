@@ -73,29 +73,60 @@ if($result = $db->db_query($qry))
 
 	while($row = $db->db_fetch_object($result))
 	{
-		// Wenn die Person nur in Lehrgaengen unterrichtet, dann ist die Lohnart 150 sonst 151
-		$qry = "SELECT
-				1
-			FROM
-				lehre.tbl_lehreinheitmitarbeiter
-				JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
-				JOIN lehre.tbl_lehrveranstaltung USING(lehrveranstaltung_id)
-			WHERE
-				mitarbeiter_uid=".$db->db_add_param($row->mitarbeiter_uid)."
-				AND tbl_lehreinheit.studiensemester_kurzbz=".$db->db_add_param($stsem)."
-				AND studiengang_kz>0 AND studiengang_kz<10000";
+		// Wenn die Person nur in Lehrgaengen unterrichtet(nur 850), dann ist die Lohnart 150 sonst 151
+		// $qry = "
+		// SELECT
+				// 1
+			// FROM
+				// lehre.tbl_lehreinheitmitarbeiter
+				// JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
+				// JOIN lehre.tbl_lehrveranstaltung USING(lehrveranstaltung_id)
+			// WHERE
+				// mitarbeiter_uid=".$db->db_add_param($row->mitarbeiter_uid)."
+				// AND tbl_lehreinheit.studiensemester_kurzbz=".$db->db_add_param($stsem)."
+				// AND studiengang_kz>0 AND studiengang_kz<10000
+				// ";
+			$qry = "
+					SELECT * FROM
+					(
+					SELECT
+					tbl_mitarbeiter.personalnummer, tbl_abrechnung.mitarbeiter_uid,
+					string_agg(tbl_kostenstelle.kostenstelle_nr,',') as kostenstelle,
+					CASE WHEN string_agg(tbl_kostenstelle.kostenstelle_nr,',') LIKE '850' then 150 else 151 END as lohnart
+
+					FROM
+					addon.tbl_abrechnung
+					JOIN wawi.tbl_kostenstelle USING(kostenstelle_id)
+					JOIN public.tbl_mitarbeiter USING(mitarbeiter_uid)
+					WHERE
+					abrechnungsdatum=".$db->db_add_param($abrechnungsdatum)."
+					AND kostenstelle_id is not null
+					AND abschluss=false
+					and mitarbeiter_uid = ".$db->db_add_param($row->mitarbeiter_uid)."
+
+					GROUP BY
+					tbl_mitarbeiter.personalnummer, tbl_abrechnung.mitarbeiter_uid
+
+					ORDER BY personalnummer
+					)x
+					where x.lohnart = 151
+					";		
 
 		$lohnart=150;
 		if($result_lohnart = $db->db_query($qry))
 			if($db->db_num_rows($result_lohnart)>0)
 				$lohnart=151;
+			
+		// if($result_lohnart = $db->db_query($qry))
+			// if($db->db_num_rows($result_lohnart)>0)
+				// $lohnart=151;
 
 		if($sonderzahlung)
 			$lohnart=514;
 
 		// Wenn Kostenstelle 800 dann ist die Lohnart 151
-		if($row->kostenstelle_nr=='800')
-			$lohnart = 151;
+		// if($row->kostenstelle_nr=='800')
+			// $lohnart = 151;
 
 		//Abrechnungsmonat;Kundenummer;Personalnummer;;Lohnart;;;lfd_brutto;kostenstelle;
 		$fields = array($monat, KUNDENNUMMER, $row->personalnummer,'', $lohnart,'','', number_format($row->brutto,2,',',''), $row->kostenstelle_nr);

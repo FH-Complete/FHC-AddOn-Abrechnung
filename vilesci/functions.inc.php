@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /* Copyright (C) 2015 fhcomplete.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -273,7 +273,7 @@ function printAbrechnungsmonatDropDown($abrechnungsmonat=null)
 		$stsem_ende = $stsem->getSemesterFromDatum($monatsende);
 		$bezeichnung='';
 
-		if($stsem_ende!=$stsem_beginn && $stsem_ende!='' && $stsem_beginn!='')
+		if(($stsem_ende!=$stsem_beginn && $stsem_ende!='' && $stsem_beginn!='')||($stsem_ende!=$stsem_beginn))
 		{
 			$stsem->load($stsem_beginn);
 
