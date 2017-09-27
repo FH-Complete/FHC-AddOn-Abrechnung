@@ -96,7 +96,7 @@ if($studiensemester_kurzbz!='')
 	if($result = $db->db_query($qry))
 	{
 		echo '<table>';
-		echo '<tr><th>Vorname</th><th>Nachname</th><th>DV-Art Alt</th><th>DV-Art Neu</th><th>LG</th><th>Gesamt</th></tr>';
+		echo '<tr><th>Vorname</th><th>Nachname</th><th>DV-Art Alt</th><th>DV-Art Neu</th><th>LG</th><th>Gesamt</th><th>Fiktiver Monatsbezug</th><th>Tage offen</th><th>Beginn</th><th>Ende</th></tr>';
 		while($row = $db->db_fetch_object($result))
 		{
 			$gesamthonorar = number_format($row->gesamthonorar,2,'.','');
@@ -112,8 +112,10 @@ if($studiensemester_kurzbz!='')
 			else
 				$fiktivmonatsbezug = '';
 
+
+
 /*
-			if((([geshon]/([semende]-[anmeldung])/7)*6)*30>405,98)
+			if((([geshon]/([semende]-[anmeldung])/7)*6)*30>425,70) //405,98 war alt
 			{
 				if([geshon]-[kostenstelle_850]-[kostenstelle_859])=0
 					200
@@ -148,7 +150,7 @@ if($studiensemester_kurzbz!='')
 			}
 			$qry_upd = "UPDATE bis.tbl_bisverwendung SET dv_art=".$db->db_add_param($dv_art)." WHERE bisverwendung_id=".$db->db_add_param($row->bisverwendung_id);
 			$db->db_query($qry_upd);
-			echo '<tr><td>'.$row->vorname.'</td><td>'.$row->nachname.'</td><td>'.$row->dv_art.'</td><td>'.$dv_art.'</td><td>'.$row->honorar_lehrgaenge.'</td><td>'.$row->gesamthonorar.'</td></tr>';
+			echo '<tr><td>'.$row->vorname.'</td><td>'.$row->nachname.'</td><td>'.$row->dv_art.'</td><td>'.$dv_art.'</td><td>'.$row->honorar_lehrgaenge.'</td><td>'.$row->gesamthonorar.'</td><td>'.$fiktivmonatsbezug.'</td><td>'.$tageoffen.'</td><td>'.$row->beginn.'</td><td>'.$row->ende.'</td></tr>';
 
 		}
 		echo '</table>';
@@ -171,6 +173,7 @@ else
 	';
 }
 
+/*
 function BerechneGesamtTage($startdatum, $endedatum)
 {
 	$gesamttage=0;
@@ -197,4 +200,86 @@ function BerechneGesamtTage($startdatum, $endedatum)
 
 	return $gesamttage;
 }
+*/
+	function BerechneGesamtTage($startdatum, $endedatum)
+	{
+		$gesamttage=0;
+
+		$datum = new DateTime($startdatum);
+		$ende = new DateTime($endedatum);
+
+		$dtstartdatum = new DateTime($startdatum);
+		$dtendedatum = new DateTime($endedatum);
+		$dtvertragsendedatum = new DateTime($endedatum);
+
+		// Wenn das Ende des Vertrags erreicht wurde nur bis zu diesem Rechnen
+		if($dtendedatum>$dtvertragsendedatum)
+		{
+			$ende = $dtvertragsendedatum;
+			$dtendedatum = $dtvertragsendedatum;
+		}
+
+		$i=0;
+
+		// Wenn die Verwendung am letzten Tag des Monats startet wird 1 Tag abgerechnet
+		// zB am 30.9. oder 31.8.
+		if($dtstartdatum==$dtendedatum)
+			return 1;
+
+		while($datum<$ende || $datum->format('d')==31)
+		{
+			// Tag des letzten Tages im Monat ermitteln
+			$letzterTagimMonat = new DateTime(date('Y-m-t',$datum->getTimestamp()));
+			$letzterTagimMonat = $letzterTagimMonat->format('d');
+
+			$i++;
+			if($i>100)
+				die('Abbruch beim Berechnen der Tage aufgrund Endlosschleife: Start:'.$startdatum.', Ende:'.$endedatum.', Vertragsende:'.$vertragsendedatum);
+
+			$tag = $datum->format('d');
+
+			if($dtstartdatum->format('m')==$datum->format('m')  && $dtvertragsendedatum->format('m')!=$datum->format('m'))
+			{
+				// 1. Monat
+				// hier wird immer bis zum tatsaechlichen Monatsende gerechnet nicht bis zum 30. zB im Feb. bis 28.
+				$gesamttage+=$letzterTagimMonat-$tag+1;
+
+				if ($gesamttage > 30)
+					$gesamttage = 30;
+			}
+			elseif($dtvertragsendedatum->format('m')==$datum->format('m') && $dtendedatum->format('m')==$datum->format('m') && $dtstartdatum->format('m') != $datum->format('m'))
+			{
+				// Letzter Monat
+				// hier werden einfach die Tage des Monats dazugerechnet
+				// Das trifft aber nur zu wenn es das Monat des Vertragsendes ist. Ansonsten wird das volle Monat gerechnet
+				// da sonst die berechnung der bereits abgerechneten Tage nicht korrekt ist.
+				if($dtendedatum->format('d')>30)
+					$gesamttage+=30;
+				else
+					$gesamttage+=$dtendedatum->format('d');
+			}
+			elseif($dtvertragsendedatum->format('m')==$datum->format('m') && $dtendedatum->format('m')==$datum->format('m') && $dtstartdatum->format('m') == $datum->format('m'))
+			{
+				// Letzter Monat = erster Monat
+				// hier werden einfach die Tage des Monats dazugerechnet
+				// Das trifft aber nur zu wenn es das Monat des Vertragsendes ist. Ansonsten wird das volle Monat gerechnet
+				// da sonst die berechnung der bereits abgerechneten Tage nicht korrekt ist.
+				$gesamttage=$dtendedatum->format('d')-$datum->format('d') + 1;
+			}
+			else
+			{
+				// Zwischenmonat
+				// hier wird immer mit 30 Tagen gerechnet
+				$gesamttage+=30;
+			}
+
+			$datum = new DateTime(date('Y-m-t',$datum->getTimestamp())); // Letzten Tag im Monat
+
+			$datum->add(new DateInterval('P1D')); // 1 Tag dazuzaehlen
+		}
+		return $gesamttage;
+
+	}
+
+
 ?>
