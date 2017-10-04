@@ -67,6 +67,7 @@ if($studiensemester_kurzbz!='')
 					JOIN lehre.tbl_lehrveranstaltung ON(tbl_lehreinheit.lehrveranstaltung_id=tbl_lehrveranstaltung.lehrveranstaltung_id)
 				WHERE
 					tbl_lehrveranstaltung.studiengang_kz<0
+					AND tbl_lehreinheit.studiensemester_kurzbz=".$db->db_add_param($studiensemester_kurzbz)."
 					AND tbl_vertrag.person_id=a.person_id
 				) as honorar_lehrgaenge
 			 FROM (
