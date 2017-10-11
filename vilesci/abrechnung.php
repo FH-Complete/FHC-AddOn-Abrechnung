@@ -75,8 +75,11 @@ echo '<!DOCTYPE html>
 	<link href="../skin/dashboard.css" rel="stylesheet">
 	<link rel="stylesheet" href="../../../skin/fhcomplete.css" type="text/css">
 	<link rel="stylesheet" href="../../../skin/tablesort.css" type="text/css">
-	<script type="text/javascript" src="../../../include/js/jquery1.9.min.js"></script>
-	<link rel="stylesheet" type="text/css" href="../../../skin/jquery-ui-1.9.2.custom.min.css"/>
+
+	<script type="text/javascript" src="../../../vendor/jquery/jqueryV1/jquery-1.12.4.min.js"></script>
+
+	<link rel="stylesheet" type="text/css" href="../../../vendor/components/jqueryui/themes/base/jquery-ui.min.css">
+
 	<link href="../skin/abrechnung.css" rel="stylesheet">
 	<script src="../include/js/bootstrap.min.js"></script>
 	<title>Abrechnung</title>
