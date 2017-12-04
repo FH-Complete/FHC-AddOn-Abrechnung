@@ -259,6 +259,15 @@ function printAbrechnungsmonatDropDown($abrechnungsmonat=null)
 	$jahr = date('Y');
 	$monat = date('m');
 	$dtnow = new DateTime();
+	
+	//if hinzugefügt um Feb auch anzuzeigen wenn der aktulle tag > 28 ist
+	/*
+	if(date_format($dtnow, 'd') > 28)
+		$dtnow = new DateTime('-7 days');*/
+	// $dtnow manipulation damit Feb auch angezeigt wird nach dem 28 jedes Monats - laut Technikum kein Problem - $dtnow wird auf den ersten des Monats gesetzt
+	$a = date_format($dtnow, 'd')-1;
+	$dtnow = new DateTime('-'.$a.'days');
+	
 	$dtago = $dtnow->sub(new DateInterval('P6M'));
 
 	for($i=1;$i<=12;$i++)
@@ -297,6 +306,7 @@ function printAbrechnungsmonatDropDown($abrechnungsmonat=null)
 
 		$bezeichnung = $monatsname[1][$dtago->format('n')-1].' '.$dtago->format('Y').' ('.$value.')';
 		echo '<option value="'.$value.'" '.$selected.'>'.$bezeichnung.'</option>';
+		
 		$dtago->add(new DateInterval('P1M'));
 	}
 
