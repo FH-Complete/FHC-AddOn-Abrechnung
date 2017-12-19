@@ -103,7 +103,7 @@ if($studiensemester_kurzbz!='')
 					JOIN lehre.tbl_lehrveranstaltung ON(tbl_lehreinheit.lehrveranstaltung_id=tbl_lehrveranstaltung.lehrveranstaltung_id)
 				WHERE
 					tbl_lehrveranstaltung.studiengang_kz<0
-					AND tbl_lehreinheit.studiensemester_kurzbz='WS2017'
+					AND tbl_lehreinheit.studiensemester_kurzbz=".$db->db_add_param($studiensemester_kurzbz)."
 					AND tbl_vertrag.person_id=a.person_id
 				) as honorar_lehrgaenge
 			 FROM (
@@ -120,17 +120,17 @@ if($studiensemester_kurzbz!='')
 					WHERE
 						tbl_lehreinheitmitarbeiter.mitarbeiter_uid=vw_mitarbeiter.uid
 						AND tbl_lehreinheitmitarbeiter.vertrag_id=tbl_vertrag.vertrag_id
-						AND tbl_lehreinheit.studiensemester_kurzbz='WS2017'
+						AND tbl_lehreinheit.studiensemester_kurzbz=".$db->db_add_param($studiensemester_kurzbz)."
 						)
 				AND (tbl_bisverwendung.beginn is null
-					OR (tbl_bisverwendung.beginn>='2017-09-01' AND tbl_bisverwendung.beginn<='2018-02-03'))
+					OR (tbl_bisverwendung.beginn>=".$db->db_add_param($start)." AND tbl_bisverwendung.beginn<=".$db->db_add_param($ende)."))
 				AND vw_mitarbeiter.fixangestellt=false)
 				OR
 				(NOT EXISTS(SELECT * FROM lehre.tbl_vertrag_vertragsstatus WHERE vertrag_id=tbl_vertrag.vertrag_id AND vertragsstatus_kurzbz in ('storno','abgerechnet'))
 				AND vertragstyp_kurzbz != 'Lehrauftrag'
 				AND vw_mitarbeiter.fixangestellt=false
 				AND (tbl_bisverwendung.beginn is null
-					OR (tbl_bisverwendung.beginn>='2017-09-01' AND tbl_bisverwendung.beginn<='2018-02-03')))					
+					OR (tbl_bisverwendung.beginn>=".$db->db_add_param($start)." AND tbl_bisverwendung.beginn<=".$db->db_add_param($ende).")))					
 			GROUP BY vorname, nachname, tbl_bisverwendung.beginn, tbl_bisverwendung.ende, person_id, tbl_bisverwendung.bisverwendung_id, tbl_bisverwendung.dv_art) a
 		";
 
