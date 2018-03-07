@@ -45,6 +45,7 @@ $abrechnungsdatum_prev = $dtago->format('Y-m-t');
 
 echo 'Abrechnungsmonat: <select name="abrechnungsmonat">';
 $abrechnungsdatum_next = getNextAbrechnungsdatum($abrechnungsdatum_prev);
+
 $dtnext = new DateTime($abrechnungsdatum_next);
 if($dtnext<=$dtnow)
 {
@@ -55,8 +56,14 @@ if($abrechnungsdatum=='')
 	$abrechnungsdatum = $abrechnungsdatum_prev;
 $stsem = $stsem_obj->getSemesterFromDatum($abrechnungsdatum);
 
-for($i=1;$i<=3;$i++)
+for($i=1;$i<=4;$i++)
 {
+	if($monat == "02" && $i == 1)
+	{
+		$abrechnungsdatum_prev = getNextAbrechnungsdatum($abrechnungsdatum_prev);
+		$abrechnungsdatum_prev = getNextAbrechnungsdatum($abrechnungsdatum_prev);
+		$abrechnungsdatum_prev = getNextAbrechnungsdatum($abrechnungsdatum_prev);
+	}
 	$value = $abrechnungsdatum_prev;
 	$dt_date=new DateTime($abrechnungsdatum_prev);
 	//$value = $dtago->format('m/Y');
@@ -71,6 +78,9 @@ for($i=1;$i<=3;$i++)
 }
 
 echo '</select>';
+
+/*var_dump ($abrechnungsdatum_next);*/
+
 echo '<input type="submit" value="Importieren" />
 </form>';
 
