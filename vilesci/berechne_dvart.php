@@ -109,7 +109,7 @@ if($studiensemester_kurzbz!='')
 			 FROM (
 			SELECT
 				vorname, nachname, tbl_bisverwendung.beginn, tbl_bisverwendung.ende, person_id,tbl_bisverwendung.bisverwendung_id,tbl_bisverwendung.dv_art,
-				sum(betrag) as gesamthonorar
+				sum(case when betrag = 'NaN' then 0.0 else betrag end) as gesamthonorar
 			FROM
 				lehre.tbl_vertrag
 				JOIN campus.vw_mitarbeiter USING(person_id)
