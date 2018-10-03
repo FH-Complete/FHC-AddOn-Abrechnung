@@ -79,7 +79,12 @@ echo '<!DOCTYPE html>
 	<script type="text/javascript" src="../../../vendor/jquery/jqueryV1/jquery-1.12.4.min.js"></script>
 
 	<link rel="stylesheet" type="text/css" href="../../../vendor/components/jqueryui/themes/base/jquery-ui.min.css">
-
+	<script type="text/javascript" src="../../../vendor/christianbach/tablesorter/jquery.tablesorter.js"></script>
+	<link rel="stylesheet" type="text/css" href="../../../vendor/FHC-vendor/jquery-tablesorter/css/theme.default.css">
+	<script src="../../../vendor/FHC-vendor/jquery-tablesorter/js/jquery.tablesorter.js"></script>
+	<script src="../../../vendor/FHC-vendor/jquery-tablesorter/js/jquery.tablesorter.widgets.js"></script>
+	<link rel="stylesheet" type="text/css" href="../../../include/vendor_custom/jquery-tablesorter/tablesort.css">
+	<script type="text/javascript" src="../../../vendor/components/jqueryui/jquery-ui.min.js"></script>
 	<link href="../skin/abrechnung.css" rel="stylesheet">
 	<script src="../include/js/bootstrap.min.js"></script>
 	<title>Abrechnung</title>
