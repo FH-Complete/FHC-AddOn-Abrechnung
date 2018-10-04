@@ -82,7 +82,20 @@ echo '<!DOCTYPE html>
 
 	<link href="../skin/abrechnung.css" rel="stylesheet">
 	<script src="../include/js/bootstrap.min.js"></script>
+	
+	<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+	<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script> 
+
+	<script type="text/javascript" src="../../../vendor/christianbach/tablesorter/jquery.tablesorter.js"></script>
+	<link rel="stylesheet" type="text/css" href="../../../vendor/FHC-vendor/jquery-tablesorter/css/theme.default.css">
+	<script src="../../../vendor/FHC-vendor/jquery-tablesorter/js/jquery.tablesorter.js"></script>
+	<script src="../../../vendor/FHC-vendor/jquery-tablesorter/js/jquery.tablesorter.widgets.js"></script>
+	<link rel="stylesheet" type="text/css" href="../../../include/vendor_custom/jquery-tablesorter/tablesort.css">
+	<script type="text/javascript" src="../../../vendor/components/jqueryui/jquery-ui.min.js"></script>
+	
 	<title>Abrechnung</title>
+	
 </head>
 <body>
 <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
@@ -243,7 +256,7 @@ if($username=='')
 		<script type="text/javascript">
 			$(document).ready(function()
 			{
-				$("#username").autocomplete({
+				$("#username").autocomplete({									
 					source: "abrechnung_autocomplete.php?work=mitarbeiter",
 					minLength:2,
 					response: function(event, ui)
@@ -279,6 +292,21 @@ if($username!='')
 {
 	if($work=='uebersicht')
 	{
+		$stsem = new studiensemester();
+		
+		if($studiensemester_kurzbz=='')
+		$studiensemester_kurzbz=$stsem->getaktorNext();
+		
+		echo '<form action="abrechnung.php" method="GET">
+		<input type="hidden" name="work" value="uebersicht" />
+		<input type="hidden" name="username" value='.$username.' />';
+		
+		printStudiensemesterDropDown($studiensemester_kurzbz);
+		
+		echo '<input type="submit" value="Auswahl" />';
+		echo '</form>';
+		//echo $studiensemester_kurzbz;
+		//echo $studiensemester_kurzbzu;
 		// Uebersichtsliste ueber alle Abrechungsmonate des Semesters anzeigen
 		printAbrechnungsuebersicht($username, $studiensemester_kurzbz);
 	}
