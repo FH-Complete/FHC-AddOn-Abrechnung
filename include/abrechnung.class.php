@@ -478,7 +478,6 @@ class abrechnung extends basis_db
 		$dtstartdatum = new DateTime($startdatum);
 		$dtendedatum = new DateTime($endedatum);
 		$dtvertragsendedatum = new DateTime($vertragsendedatum);
-
 		// Wenn das Ende des Vertrags erreicht wurde nur bis zu diesem Rechnen
 		if($dtendedatum>$dtvertragsendedatum)
 		{
@@ -492,8 +491,8 @@ class abrechnung extends basis_db
 		// zB am 30.9. oder 31.8.
 		if($dtstartdatum==$dtendedatum)
 			return 1;
-
-		while($datum<$ende || $datum->format('d')==31)
+	
+		while($datum<=$ende || $datum->format('d')==31)
 		{
 			// Tag des letzten Tages im Monat ermitteln
 			$letzterTagimMonat = new DateTime(date('Y-m-t',$datum->getTimestamp()));
@@ -543,7 +542,12 @@ class abrechnung extends basis_db
 			$datum = new DateTime(date('Y-m-t',$datum->getTimestamp())); // Letzten Tag im Monat
 
 			$datum->add(new DateInterval('P1D')); // 1 Tag dazuzaehlen
+			
+		 //echo $datum->format('Y-m-d'); echo("<br>");
+		 //echo $ende->format('Y-m-d'); echo("<br>");		
+		 //echo "--------------- <br>";
 		}
+		//echo $gesamttage;
 		return $gesamttage;
 
 	}
