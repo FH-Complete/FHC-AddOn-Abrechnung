@@ -282,7 +282,7 @@ function printAbrechnungsmonatDropDown($abrechnungsmonat=null)
 		$stsem_ende = $stsem->getSemesterFromDatum($monatsende);
 		$bezeichnung='';
 
-		if(($stsem_ende!=$stsem_beginn && $stsem_ende!='' && $stsem_beginn!='')||($stsem_ende!=$stsem_beginn))
+		if(($stsem_ende!=$stsem_beginn && $stsem_ende!='' && $stsem_beginn!='')||($stsem_ende!=$stsem_beginn && $stsem_beginn!=''))
 		{
 			$stsem->load($stsem_beginn);
 
