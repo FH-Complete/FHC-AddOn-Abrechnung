@@ -274,7 +274,7 @@ foreach($vertrag->result as $row_vertrag)
 									<td>'.$von->format('H:i').'</td>
 									<td>'.$bis->format('H:i').'</td>
 									<td>'.($row_stunde->bis-$row_stunde->von+1).'</td>
-									<td>'.$lem->stundensatz.'</td>';
+									<td>'.number_format($lem->stundensatz,2,',','').'</td>';
 
 							echo '<td>';
 							if($datum>date('Y-m-d'))
@@ -324,9 +324,9 @@ foreach($vertrag->result as $row_vertrag)
 		echo '<tr>
 				<td>'.$row_lehrauftrag['lehreinheit_id'].'</td>
 				<td>'.$row_lehrauftrag['bezeichnung'].'</td>
-				<td>'.$row_lehrauftrag['stundensatz'].'</td>
-				<td>'.number_format($row_lehrauftrag['semesterstunden'],1).'</td>
-				<td>'.$row_lehrauftrag['gesamt'].'</td>
+				<td>'.number_format($row_lehrauftrag['stundensatz'],2,',','').'</td>
+				<td>'.number_format($row_lehrauftrag['semesterstunden'],1,',','').'</td>
+				<td>'.number_format($row_lehrauftrag['gesamt'],2,',','').'</td>
 			</tr>';
 		$gesamthonorar +=$row_lehrauftrag['gesamt'];
 	}
@@ -349,13 +349,13 @@ foreach($vertrag->result as $row_vertrag)
 			echo '<tr>
 					<td>'.$datum_obj->formatDatum($row_sonderhonorar['datum'],'d.m.Y').'</td>
 					<td>'.$row_sonderhonorar['bezeichnung'].'</td>
-					<td>'.$row_sonderhonorar['gesamt'].'</td>
+					<td>'.number_format($row_sonderhonorar['gesamt'],2,',','').'</td>
 				</tr>';
 			$gesamthonorar +=$row_sonderhonorar['gesamt'];
 		}
 		echo '</tbody></table>';
 	}
-	echo '<br><br><b>'.$p->t('abrechnung/gesamthonorar').':</b> € '.number_format($gesamthonorar,2,',','.');
+	echo '<br><br><b>'.$p->t('abrechnung/gesamthonorar').':</b> € '.number_format($gesamthonorar,2,',','');
 
 
 	$abrechnung = new abrechnung();
@@ -379,11 +379,11 @@ foreach($vertrag->result as $row_vertrag)
 				<tbody>';
 			echo '<tr>
 					<td>'.$datum_obj->formatDatum($abrechnungsdatum,'d.m.Y').'</td>
-					<td>'.number_format($abrechnung->brutto,2,',','.').'</td>
-					<td>'.number_format($abrechnung->sv_lfd,2,',','.').'</td>
-					<td>'.number_format($abrechnung->lst_lfd,2,',','.').'</td>
-					<td>'.number_format($abrechnung->netto,2,',','.').'</td>
-					<td>'.number_format($abrechnung->brutto/6,2,',','.').'</td>
+					<td>'.number_format($abrechnung->brutto,2,',','').'</td>
+					<td>'.number_format($abrechnung->sv_lfd,2,',','').'</td>
+					<td>'.number_format($abrechnung->lst_lfd,2,',','').'</td>
+					<td>'.number_format($abrechnung->netto,2,',','').'</td>
+					<td>'.number_format($abrechnung->brutto/6,2,',','').'</td>
 				</tr>
 				</body>
 				</table>
