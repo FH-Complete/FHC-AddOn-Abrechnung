@@ -1,0 +1,307 @@
+﻿<?php
+/* Copyright (C) 2014 fhcomplete.org
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+ *
+ * Authors: Andreas Österreicher <andreas.oesterreicher@technikum-wien.at>
+ */
+/**
+ * Klasse zur Berechnung der monatlichen Honorars von freien Lektoren
+ *
+ */
+require_once(dirname(__FILE__).'/../../../include/basis_db.class.php');
+require_once(dirname(__FILE__).'/../../../include/anwesenheit.class.php');
+require_once(dirname(__FILE__).'/../../../include/datum.class.php');
+require_once(dirname(__FILE__).'/../../../include/wawi_konto.class.php');
+require_once(dirname(__FILE__).'/../config.inc.php');
+
+class abrechnung extends basis_db
+{
+	public $new=true;
+	public $result = array();
+
+	public $abrechnung_id;		// serial
+	public $mitarbeiter_uid;	// varchar(32)
+	public $kostenstelle_id;	// integer
+	public $konto_id;			// integer
+	public $abrechnungsdatum;	// date
+	public $sv_lfd;				// numeric(12,4)
+	public $sv_satz;			// numeric(8,4)
+	public $sv_teiler;			// integer
+	public $honorar_dgf;		// numeric(12,4)
+	public $honorar_offen;		// numeric(12,4)
+	public $brutto;				// numeric(12,4)
+	public $netto;				// numeric(12,4)
+	public $lst_lfd;			// numeric(12,4)
+	public $abschluss=false;	// boolean
+	public $log;				// text
+	public $tagegesamt;
+	public $tageabzurechnen;
+	public $tageausbezahlt;
+	public $honorar_gesamt;
+	public $bmgllsttgl;
+	public $fiktivmonatsbezug;
+	public $importiert=false;
+
+    /**
+	 * Konstruktor
+	 */
+	public function __construct()
+	{
+		parent::__construct();
+	}
+
+	/**
+	 * Laedt die Mitarbeiter die noch offene Vertraege haben
+	 */
+	public function loadMitarbeiterUnabgerechnet()
+	{
+		$qry = "SELECT distinct
+					vorname, nachname, uid, person_id,
+					(SELECT abrechnungsdatum
+					 FROM addon.tbl_abrechnung
+					 WHERE mitarbeiter_uid=tbl_mitarbeiter.mitarbeiter_uid
+					 ORDER BY abrechnungsdatum DESC LIMIT 1) as letzteabrechnung
+				FROM
+					lehre.tbl_vertrag
+					JOIN public.tbl_person USING(person_id)
+					JOIN public.tbl_benutzer USING(person_id)
+					JOIN public.tbl_mitarbeiter ON(uid=mitarbeiter_uid)
+				WHERE
+					tbl_mitarbeiter.fixangestellt = false
+					AND NOT EXISTS (SELECT 1 FROM lehre.tbl_vertrag_vertragsstatus
+								WHERE vertrag_id=tbl_vertrag.vertrag_id AND vertragsstatus_kurzbz in ('abgerechnet','storno'))
+				ORDER BY nachname, vorname";
+
+		if($result = $this->db_query($qry))
+		{
+			while($row = $this->db_fetch_object($result))
+			{
+				$obj = new stdClass();
+				$obj->vorname = $row->vorname;
+				$obj->nachname = $row->nachname;
+				$obj->uid = $row->uid;
+				$obj->person_id = $row->person_id;
+				$obj->letzteabrechnung =$row->letzteabrechnung;
+				$this->result[] = $obj;
+			}
+			return true;
+		}
+		else
+		{
+			$this->errormsg = 'Fehler beim Laden der Daten';
+			return false;
+		}
+	}
+
+	/**
+	 * Laedt die Abrechnung eines Mitarbeiters zu einem Abrechnungsdatum
+	 * @param mitarbeiter_uid UID des Mitarbeiters
+	 * @param abrechnugsdatum
+	 * @return boolean true wenn ok, false im Fehlerfall
+	 */
+	public function getAbrechnungMitarbeiter($mitarbeiter_uid, $abrechnungsdatum)
+	{
+		$qry = "SELECT
+					*
+				FROM
+					addon.tbl_abrechnung
+				WHERE
+					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)."
+					AND abrechnungsdatum=".$this->db_add_param($abrechnungsdatum)."
+					AND kostenstelle_id is null
+					AND abschluss=false
+				ORDER BY
+					abrechnungsdatum desc LIMIT 1";
+
+		if($result = $this->db_query($qry))
+		{
+			if($row = $this->db_fetch_object($result))
+			{
+				$this->abrechnung_id = $row->abrechnung_id;
+				$this->mitarbeiter_uid = $row->mitarbeiter_uid;
+				$this->kostenstelle_id = $row->kostenstelle_id;
+				$this->konto_id = $row->konto_id;
+				$this->abrechnungsdatum = $row->abrechnungsdatum;
+				$this->sv_lfd = $row->sv_lfd;
+				$this->sv_satz = $row->sv_satz;
+				$this->sv_teiler = $row->sv_teiler;
+				$this->honorar_dgf = $row->honorar_dgf;
+				$this->honorar_offen = $row->honorar_offen;
+				$this->brutto = $row->brutto;
+				$this->netto = $row->netto;
+				$this->lst_lfd = $row->lst_lfd;
+				$this->log = $row->log;
+				$this->importiert = $this->db_parse_bool($row->importiert);
+
+				return true;
+			}
+			else
+			{
+				$this->errormsg='Bisher wurde keine Abrechnung durchgefuehrt';
+				return false;
+			}
+		}
+		else
+		{
+			$this->errormsg = 'Fehler beim Laden der Daten';
+			return false;
+		}
+	}
+
+	/**
+	 * Liefert die letzte Abrechnung eines Mitarbeiters
+	 * @param mitarbeiter_uid UID des Mitarbeiters
+	 * @return boolean true wenn ok, false im Fehlerfall
+	 */
+	public function getLetzteAbrechnung($mitarbeiter_uid, $startdatum=null)
+	{
+		$qry = "SELECT
+					*
+				FROM
+					addon.tbl_abrechnung
+				WHERE
+					mitarbeiter_uid=".$this->db_add_param($mitarbeiter_uid)."
+					AND kostenstelle_id is null";
+		if(!is_null($startdatum))
+			$qry.=" AND abrechnungsdatum>=".$this->db_add_param($startdatum);
+
+		$qry.="	ORDER BY
+					abrechnungsdatum desc LIMIT 1";
+
+		if($result = $this->db_query($qry))
+		{
+			if($row = $this->db_fetch_object($result))
+			{
+				$this->abrechnung_id = $row->abrechnung_id;
+				$this->mitarbeiter_uid = $row->mitarbeiter_uid;
+				$this->kostenstelle_id = $row->kostenstelle_id;
+				$this->konto_id = $row->konto_id;
+				$this->abrechnungsdatum = $row->abrechnungsdatum;
+				$this->sv_lfd = $row->sv_lfd;
+				$this->sv_satz = $row->sv_satz;
+				$this->sv_teiler = $row->sv_teiler;
+				$this->honorar_dgf = $row->honorar_dgf;
+				$this->honorar_offen = $row->honorar_offen;
+				$this->brutto = $row->brutto;
+				$this->netto = $row->netto;
+				$this->lst_lfd = $row->lst_lfd;
+				$this->log = $row->log;
+
+				return true;
+			}
+			else
+			{
+				$this->errormsg='Bisher wurde keine Abrechnung durchgefuehrt';
+				return false;
+			}
+		}
+		else
+		{
+			$this->errormsg = 'Fehler beim Laden der Daten';
+			return false;
+		}
+	}
+
+	/**
+	 * Startet die Abrechnung eines Mitarbeiters
+	 * Dabei werden die benötigten Zahlen berechnet und ein Log erstellt
+	 * Die Daten werden dabei noch nicht gespeichert
+	 * @param $username UID des Mitarbeiters
+	 * @param $abrechnungsdatum Daten der Abrechnung
+	 * @param $honorar_gesamt Gesamthonorar Brutto das Abgerechnet werden soll
+	 * @param $verwendung_obj Verwendung die zur Abrechnung verwendet werden soll
+	 * @param $vertrag_arr Array mit den VertragsIDs die abgerechnet werden
+	 * @return boolean true wenn ok, false im Fehlerfall
+	 */
+	public function abrechnung($username, $abrechnungsdatum, $verwendung_obj)
+	{
+		// Globale Variablen die im Abrechnungsconfig definiert sind
+		global $cfg_sv_altersabschlag;
+		global $cfg_sv_abschlaege;
+		global $cfg_lsttgl;
+
+		$datum_obj = new datum();
+
+		$this->log='';
+
+		$mitarbeiter = new mitarbeiter();
+		if(!$mitarbeiter->load($username))
+		{
+			$this->errosmg = 'Fehler beim Laden des Mitabreiters';
+			return false;
+		}
+
+		$vertrag = new vertrag();
+		$vertrag->loadVertrag($mitarbeiter->person_id, false, $abrechnungsdatum);
+		$gesamtbetrag=0;
+		$this->vertrag_arr=array();
+		foreach($vertrag->result as $row)
+		{
+			if($row->vertragsdatum <= $abrechnungsdatum)
+			{
+				$this->log.="\n -> ".$row->bezeichnung.' - € '.$row->betrag.' (ID '.$row->vertrag_id.')';
+				$gesamtbetrag+=$row->betrag;
+				$this->vertrag_arr[]=$row->vertrag_id;
+			}
+		}
+
+		$this->mitarbeiter_uid = $username;
+		$startdatum = $verwendung_obj->beginn;
+		$endedatum = $verwendung_obj->ende;
+		$this->dv_art = $verwendung_obj->dv_art;
+
+		$dt_abrechnungsdatum = new DateTime($abrechnungsdatum);
+		$this->honorar_gesamt = $gesamtbetrag;
+		$this->abrechnungsdatum = $abrechnungsdatum;
+
+		// Letzte Abrechnung laden
+		$letzteabrechnung = new abrechnung();
+		if($letzteabrechnung->getLetzteAbrechnung($username, $startdatum))
+		{
+			$this->letztesabrechnungsdatum = $letzteabrechnung->abrechnungsdatum;
+			//$honorar_durchgefuehrt = $letzteabrechnung->honorar_dgf+$letzteabrechnung->brutto;
+		}
+		else
+		{
+			//$honorar_durchgefuehrt = 0;
+			$this->letztesabrechnungsdatum = null;
+		}
+                
+		$honorar_durchgefuehrt = $this->getAbrechnungsbrutto($username, $startdatum, $endedatum);
+                
+                // Jahressechstel-Split bei der letzten WS-Abrechnung
+                 if ((date("m",strtotime($abrechnungsdatum)) == '02' && $this->letztesabrechnungsdatum == $abrechnungsdatum) && split($username))
+                      $honorar_durchgefuehrt = $this->getAbrechnungsbrutto($username, strtotime($abrechnungsdatum->format("Y") || '-01-01'), $endedatum);
+
+		// Gesamttage berechenen
+		$this->tagegesamt = $this->BerechneGesamttage($startdatum, $endedatum, $endedatum);
+		$this->log.="\nLetzte Abrechnung: ".$datum_obj->formatDatum($this->letztesabrechnungsdatum, 'd.m.Y');
+		$this->log.="\nAbrechnungsdatum: ".$datum_obj->formatDatum($abrechnungsdatum, 'd.m.Y');
+		$this->log.="\nTage gesamt: ".$this->tagegesamt;
+
+		// bereits ausbezahlte Tage berechnen
+		if(!is_null($this->letztesabrechnungsdatum))
+			$this->tageausbezahlt = $this->BerechneGesamttage($startdatum, $this->letztesabrechnungsdatum, $endedatum);
+		else
+			$this->tageausbezahlt = 0;
+		$this->log.=' / Tage ausbezahlt:'.$this->tageausbezahlt;
+
+		// noch abzurechnende Tage berechenen
+		if(!is_null($this->letztesabrechnungsdatum))
+		{
+			// 1 Tag dazuzaehlen da ab dem 1. gerechnet wird
+			$letztesabrechnungsdatumplus1 = new DateTime($this->letztesabrechnungsdatum);
+			$let

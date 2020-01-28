@@ -214,6 +214,30 @@ class abrechnung extends basis_db
 			return false;
 		}
 	}
+        
+              /**
+	 * Prueft ob eine gesplittete Jahressechstelberechnung durchgeführt wird
+	 * @param $username
+	 * @return boolean
+	 */
+	public function split_sechstel($username)
+	{
+		$qry = "SELECT
+					1
+				FROM
+					addon.tbl_abrechnung_jahressechstel
+				WHERE
+					mitarbeiter_uid=".$this->db_add_param($username);
+
+		if($result = $this->db_query($qry))
+		{
+			if($this->db_num_rows($result)>0)
+				return false;
+			else
+				return true;
+		}
+	}
+        
 
 	/**
 	 * Startet die Abrechnung eines Mitarbeiters
@@ -265,6 +289,18 @@ class abrechnung extends basis_db
 
 		$dt_abrechnungsdatum = new DateTime($abrechnungsdatum);
 		$this->honorar_gesamt = $gesamtbetrag;
+                
+                if (date("m",strtotime($abrechnungsdatum)) == '02' && date("d",strtotime($abrechnungsdatum) != '28') && $this->split_sechstel($username))
+                {
+                    $letzteabrechnung = new abrechnung();
+                    if($letzteabrechnung->getLetzteAbrechnung($username, $startdatum))
+                    {
+			$this->honorar_gesamt = $this->honorar_gesamt - $letzteabrechnung->honorar_dgf;
+			//$honorar_durchgefuehrt = $letzteabrechnung->honorar_dgf+$letzteabrechnung->brutto;
+                    }
+                    
+                }
+                
 		$this->abrechnungsdatum = $abrechnungsdatum;
 
 		// Letzte Abrechnung laden
@@ -279,8 +315,20 @@ class abrechnung extends basis_db
 			//$honorar_durchgefuehrt = 0;
 			$this->letztesabrechnungsdatum = null;
 		}
-
+                
 		$honorar_durchgefuehrt = $this->getAbrechnungsbrutto($username, $startdatum, $endedatum);
+                                                
+                // Jahressechstel-Split bei der letzten WS-Abrechnung                
+                 if (date("m",strtotime($abrechnungsdatum)) == '02' && date("d",strtotime($abrechnungsdatum) != '28') && $this->split_sechstel($username))
+                 {
+                    echo date('Y-m-d', strtotime(substr($abrechnungsdatum,0,4).'-01-01'));
+                      $honorar_durchgefuehrt = $this->getAbrechnungsbrutto($username, date('Y-m-d', strtotime(substr($abrechnungsdatum,0,4).'-01-01')), $endedatum);
+                      $this->log.="\nBin im if: ";
+                       $this->log.= substr($abrechnungsdatum,0,4) . $abrechnungsdatum;
+                 }
+                else {
+                    $this->log.="\nBin NICHT im if: " . $this->letztesabrechnungsdatum . " | " . $abrechnungsdatum;
+                }
 
 		// Gesamttage berechenen
 		$this->tagegesamt = $this->BerechneGesamttage($startdatum, $endedatum, $endedatum);
@@ -317,7 +365,14 @@ class abrechnung extends basis_db
 		$this->honorar_dgf=$honorar_durchgefuehrt;
 		$this->honorar_offen = $honorar_offen;
 
-		$honorar_ausbezahlt = $honorar_durchgefuehrt + ($honorar_durchgefuehrt/6);
+                // Standard für die WS Abrechnung 09-12 und die SS Abrechnung                                
+                $honorar_ausbezahlt = $honorar_durchgefuehrt + ($honorar_durchgefuehrt/6);
+                
+                // Für die WS-Abrechnung im Jänner darf die Sonderzahlung der bisher durchgeführten Abrechnungsmonate nicht berücksichtigt werden.
+                 if ((date("m",strtotime($abrechnungsdatum)) == '01') && $this->split_sechstel($username))
+                      $honorar_ausbezahlt = $honorar_durchgefuehrt;
+                
+                
 		$this->log.="\n\nHonorar abgerechnet (lfd. Brutto kum. + Sonderzahlung kum.): ".number_format($honorar_ausbezahlt,2);
 		$this->log.="\nHonorar ausbezahlt brutto: ".number_format($honorar_durchgefuehrt,2);
 		$this->log.="\nHonorar offen: ".number_format($honorar_offen,2);
@@ -1363,6 +1418,6 @@ class abrechnung extends basis_db
 			$this->errormsg='Fehler beim Laden der Daten';
 			return false;
 		}
-	}
+	}          
 }
 ?>
