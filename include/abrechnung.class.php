@@ -290,8 +290,15 @@ class abrechnung extends basis_db
 		$dt_abrechnungsdatum = new DateTime($abrechnungsdatum);
 		$this->honorar_gesamt = $gesamtbetrag;
                 
-                if (date("m",strtotime($abrechnungsdatum)) == '02' && date("d",strtotime($abrechnungsdatum) != '28') && $this->split_sechstel($username))
+               // if (date("m",strtotime($abrechnungsdatum)) == '02' && (date("d",strtotime($abrechnungsdatum) != '28') || date("d",strtotime($abrechnungsdatum) != '29')) && $this->split_sechstel($username))
+                
+                $this->log.= "\nMonat:" . date("m",strtotime($abrechnungsdatum));
+                $this->log.= "\nTag:" . date("d",strtotime($abrechnungsdatum));
+                
+                
+                if (date("m",strtotime($abrechnungsdatum)) == '02' && date("d",strtotime($abrechnungsdatum)) != '28' && date("d",strtotime($abrechnungsdatum)) != '29')
                 {
+                    $this->log.="\nBin im if 1:";
                     $letzteabrechnung = new abrechnung();
                     if($letzteabrechnung->getLetzteAbrechnung($username, $startdatum))
                     {
@@ -319,11 +326,12 @@ class abrechnung extends basis_db
 		$honorar_durchgefuehrt = $this->getAbrechnungsbrutto($username, $startdatum, $endedatum);
                                                 
                 // Jahressechstel-Split bei der letzten WS-Abrechnung                
-                 if (date("m",strtotime($abrechnungsdatum)) == '02' && date("d",strtotime($abrechnungsdatum) != '28') && $this->split_sechstel($username))
+                 // if (date("m",strtotime($abrechnungsdatum)) == '02' && (date("d",strtotime($abrechnungsdatum) != '28') || date("d",strtotime($abrechnungsdatum) != '29')) && $this->split_sechstel($username))
+                 if (date("m",strtotime($abrechnungsdatum)) == '02' & date("d",strtotime($abrechnungsdatum)) != '28' & date("d",strtotime($abrechnungsdatum)) != '29')
                  {
                     echo date('Y-m-d', strtotime(substr($abrechnungsdatum,0,4).'-01-01'));
                       $honorar_durchgefuehrt = $this->getAbrechnungsbrutto($username, date('Y-m-d', strtotime(substr($abrechnungsdatum,0,4).'-01-01')), $endedatum);
-                      $this->log.="\nBin im if: ";
+                      $this->log.="\nBin im if 2:";
                        $this->log.= substr($abrechnungsdatum,0,4) . $abrechnungsdatum;
                  }
                 else {
