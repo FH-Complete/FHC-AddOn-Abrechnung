@@ -792,7 +792,7 @@ function generateVerwendungMitarbeiter($username, $studiensemester_kurzbz=null)
 
 		$bisverwendung->beginn=$startdatum;
 		$bisverwendung->ende=$endedatum;
-		$bisverwendung->ba1code=4; // Freier Dienstvertrag
+		$bisverwendung->ba1code=105; // Freier Dienstvertrag
 		$bisverwendung->ba2code=1; // Befristet
 		$bisverwendung->verwendung_code=1; // Lehr und Forschungspersonal
 		$bisverwendung->mitarbeiter_uid=$username;
