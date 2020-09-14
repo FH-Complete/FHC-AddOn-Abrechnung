@@ -72,12 +72,24 @@ $qry = "SELECT
 		tbl_mitarbeiter.personalnummer, tbl_person.vorname, tbl_person.nachname,
 		tbl_person.titelpre, tbl_bisverwendung.dv_art, tbl_bisverwendung.beginn,
 		tbl_bisverwendung.ende, tbl_person.svnr, tbl_person.geschlecht, tbl_person.person_id,
-		(SELECT kontakt FROM public.tbl_kontakt WHERE person_id=tbl_person.person_id AND kontakttyp='email' ORDER BY zustellung DESC limit 1) as email
+		(SELECT kontakt FROM public.tbl_kontakt WHERE person_id=tbl_person.person_id AND kontakttyp='email' ORDER BY zustellung DESC limit 1) as email,
+		vergp,
+		gesre,
+		versi,
+		tarif,
+		tgwvg,
+		istkz,
+		pa109,
+		e18la,
+		gkk,
+		kobef,
+		dbdz
 	FROM
 		public.tbl_mitarbeiter
 		JOIN public.tbl_benutzer ON(uid=mitarbeiter_uid)
 		JOIN public.tbl_person USING(person_id)
 		JOIN bis.tbl_bisverwendung USING(mitarbeiter_uid)
+		LEFT JOIN addon.tbl_abrechnung_lv61 using(dv_art)
 	WHERE
 		NOT fixangestellt
 		AND tbl_bisverwendung.beginn<=".$db->db_add_param($abrechnungsdatum_ende)."
@@ -108,6 +120,11 @@ if($result = $db->db_query($qry))
 		'kost', // ?? immer leer
 		'kzlg', // ?? immer G
 		'dv', // dv_art 19 / 401
+		'gesre',
+		'versi',
+		'vergp',
+		'tarif',
+		'tgwvg',
 		'BIC', // BIC
 		'IBAN', // IBAN
 		//'bank', // Name der Bank
@@ -117,6 +134,9 @@ if($result = $db->db_query($qry))
 		'dbdz', // ?? immer 0
 		'fibuk', // ?? immer 2
 		'ff8', // ?? immer 2
+		'Istkz',
+		'pa109',
+		'e18la',
 		'email',
 		'pdfpw'
 	),';');
@@ -134,10 +154,10 @@ if($result = $db->db_query($qry))
 				KUNDENNUMMER, $row->personalnummer,'0', $row->nachname, $row->vorname,
 				$row->titelpre,	'Lektor', $row->svnr, $adresse->strasse, $adresse->plz, $adresse->ort,
 				($row->geschlecht=='m'?1:2), $datum_obj->formatDatum($row->beginn,'Ymd'),
-				'', '', 'G', $row->dv_art,
+				'', '', 'G', $row->dv_art, $row->gesre, $row->versi, $row->vergp, $row->tarif, $row->tgwvg,
 				$bankverbindung->bic, $bankverbindung->iban,
-				'0','1','0','0','2','2',
-				$row->email, $row->svnr
+				$row->gkk,$row->kobef,'0',$row->dbdz,'2','2',
+				$row->istkz, $row->pa109, $row->e18la, $row->email, $row->svnr
 			),';');
 	}
 	fclose($fp);
