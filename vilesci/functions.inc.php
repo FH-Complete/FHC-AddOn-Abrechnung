@@ -620,9 +620,10 @@ function generateVerwendung($studiensemester_kurzbz)
 				AND NOT EXISTS(SELECT 1 FROM lehre.tbl_vertrag_vertragsstatus
 					WHERE vertrag_id=tbl_vertrag.vertrag_id AND vertragsstatus_kurzbz in('abgerechnet','storno'))
 				AND NOT EXISTS(SELECT 1 FROM bis.tbl_bisverwendung WHERE mitarbeiter_uid=tbl_mitarbeiter.mitarbeiter_uid
-					AND beginn>=".$db->db_add_param($studiensemester->start)."
+					AND beginn>=".$db->db_add_param($studiensemester->start)."::timestamp - interval '7' day
 					AND ende<=".$db->db_add_param($studiensemester->ende)."
-					)";
+					)
+					and public.tbl_benutzer.aktiv = true";
 
 	if($result = $db->db_query($qry))
 	{
@@ -687,12 +688,13 @@ function showFehlendeVerwendung($studiensemester_kurzbz)
 							JOIN public.tbl_benutzer USING(person_id)
 							JOIN public.tbl_mitarbeiter ON(uid=mitarbeiter_uid)
 						WHERE
-							NOT EXISTS(SELECT 1 FROM lehre.tbl_vertrag_vertragsstatus
+						public.tbl_benutzer.aktiv = true
+							and NOT EXISTS(SELECT 1 FROM lehre.tbl_vertrag_vertragsstatus
 							WHERE vertrag_id=tbl_vertrag.vertrag_id AND vertragsstatus_kurzbz in('abgerechnet','storno'))
 							AND EXISTS(SELECT 1 FROM lehre.tbl_lehreinheitmitarbeiter JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
 								WHERE vertrag_id=tbl_vertrag.vertrag_id AND studiensemester_kurzbz=".$db->db_add_param($studiensemester_kurzbz).")
 							AND NOT EXISTS(SELECT 1 FROM bis.tbl_bisverwendung WHERE mitarbeiter_uid=tbl_mitarbeiter.mitarbeiter_uid
-							AND beginn>=".$db->db_add_param($studiensemester->start)."
+							AND beginn>=".$db->db_add_param($studiensemester->start)."::timestamp - interval '7' day
 							AND ende<=".$db->db_add_param($studiensemester->ende)."
 							)
 					) a

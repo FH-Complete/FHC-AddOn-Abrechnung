@@ -92,6 +92,7 @@ $qry = "SELECT
 		LEFT JOIN addon.tbl_abrechnung_lv61 using(dv_art)
 	WHERE
 		NOT fixangestellt
+		AND public.tbl_benutzer.aktiv = true
 		AND tbl_bisverwendung.beginn<=".$db->db_add_param($abrechnungsdatum_ende)."
 		AND tbl_bisverwendung.ende>=".$db->db_add_param($abrechnungsdatum_start);
 

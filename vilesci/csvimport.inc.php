@@ -42,7 +42,7 @@ $monat = date('m');
 $dtnow = new DateTime();
 $dtago = $dtnow->sub(new DateInterval('P1M'));
 $abrechnungsdatum_prev = $dtago->format('Y-m-t');
-
+/* OLD DROPDOWN
 echo 'Abrechnungsmonat: <select name="abrechnungsmonat">';
 $abrechnungsdatum_next = getNextAbrechnungsdatum($abrechnungsdatum_prev);
 
@@ -77,7 +77,8 @@ for($i=1;$i<=4;$i++)
 	$abrechnungsdatum_prev = getPrevAbrechnungsdatum($abrechnungsdatum_prev);
 }
 
-echo '</select>';
+echo '</select>';*/
+printAbrechnungsmonatDropDown();
 
 /*var_dump ($abrechnungsdatum_next);*/
 
