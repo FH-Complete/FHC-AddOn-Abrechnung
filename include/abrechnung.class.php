@@ -1144,7 +1144,7 @@ class abrechnung extends basis_db
 	 */
 	public function loadAnwesenheitsabzug($username, $vertrag_arr, $abrechnungsdatum)
 	{
-		if(count($vertrag_arr)==0)
+		if(numberOfElements($vertrag_arr)==0)
 			return false;
 		$qry = "SELECT lehreinheit_id, tbl_lehrveranstaltung.bezeichnung
 				FROM

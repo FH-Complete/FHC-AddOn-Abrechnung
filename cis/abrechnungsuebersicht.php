@@ -212,7 +212,7 @@ foreach($vertrag->result as $row_vertrag)
 	$vertragdetail = new vertrag();
 	$vertragdetail->loadZugeordnet($row_vertrag->vertrag_id);
 
-		if(count($vertragdetail->result)>0)
+		if(numberOfElements($vertragdetail->result)>0)
 		{
 			foreach($vertragdetail->result as $row_detail)
 			{
@@ -332,7 +332,7 @@ foreach($vertrag->result as $row_vertrag)
 	}
 	echo '</tbody></table>';
 
-	if(count($sonderhonorar)>0)
+	if(numberOfElements($sonderhonorar)>0)
 	{
 		echo '<h2>'.$p->t('abrechnung/sonderhonorare').'</h2>';
 		echo '<table id="sonderhonorare" class="tablesorter">

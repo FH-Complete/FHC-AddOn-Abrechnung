@@ -40,7 +40,7 @@ function alleAbrechnen($abrechnungsmonat)
 		// Wenn der Mitarbeiter noch kein Konto hat wird eines erstellt
 		$konto = new wawi_konto();
 		$konto->getKontoPerson($mitarbeiter->person_id);
-		if(count($konto->result)==0)
+		if(numberOfElements($konto->result)==0)
 		{
 			$konto = new wawi_konto();
 			$konto->new = true;
@@ -377,7 +377,7 @@ function generateVertraege($studiensemester_kurzbz)
 	$vertrag = new vertrag();
 	$vertrag->getFalscheBetraege($studiensemester_kurzbz);
 
-	if(count($vertrag->result)>0)
+	if(numberOfElements($vertrag->result)>0)
 	{
 		foreach($vertrag->result as $row)
 		{
@@ -520,18 +520,18 @@ function showFehlendeVertraege($studiensemester_kurzbz)
 	$vertrag = new vertrag();
 	$vertrag->getFalscheVertraege($studiensemester_kurzbz);
 
-	if(count($vertrag->result)>0)
+	if(numberOfElements($vertrag->result)>0)
 	{
-		echo count($vertrag->result).' Verträge sind falschen Personen zugeordnet und werden entfernt<br>';
+		echo numberOfElements($vertrag->result).' Verträge sind falschen Personen zugeordnet und werden entfernt<br>';
 	}
 
 	// Vertraege holen die falschen Personen zugeordnet sind
 	$vertrag = new vertrag();
 	$vertrag->getFalscheBetraege($studiensemester_kurzbz);
 
-	if(count($vertrag->result)>0)
+	if(numberOfElements($vertrag->result)>0)
 	{
-		echo count($vertrag->result).' Verträge haben falsche Beträge und werden korrigiert<br>';
+		echo numberOfElements($vertrag->result).' Verträge haben falsche Beträge und werden korrigiert<br>';
 	}
 
 	// Vertraege holen die falsche Beträge haben
@@ -539,7 +539,7 @@ function showFehlendeVertraege($studiensemester_kurzbz)
 	$vertrag = new vertrag();
 	if($vertrag->loadPersonenNichtZugeordnet($studiensemester_kurzbz))
 	{
-		echo 'Folgende '.count($vertrag->result).' Personen haben Lehraufträge ohne Vertrag:';
+		echo 'Folgende '.numberOfElements($vertrag->result).' Personen haben Lehraufträge ohne Vertrag:';
 		echo '
 			<script>
 				$(document).ready(function()
@@ -838,7 +838,7 @@ function showNochNichtAbgerechnet($abrechnungsmonat)
 	// Liste aller Mitarbeiter die noch nicht abgerechnet wurden anzeigen
 	$abrechnung = new abrechnung();
 	$abrechnung->loadMitarbeiterUnabgerechnet();
-	echo '<br>Bei den folgenden '.count($abrechnung->result).' Mitarbeitern sind noch nicht abgerechnete Verträge eingetragen:';
+	echo '<br>Bei den folgenden '.numberOfElements($abrechnung->result).' Mitarbeitern sind noch nicht abgerechnete Verträge eingetragen:';
 
 	echo '<form action="abrechnung.php?abrechnungsmonat='.$abrechnungsmonat.'&work=alleabrechnen" method="POST">
 	<input type="hidden" name="abrechnungsmonat" value="'.$abrechnungsmonat.'" />
@@ -947,7 +947,7 @@ function printVertragsuebersicht($person_id, $abrechnungsdatum)
 	$vertrag = new vertrag();
 	$vertrag->loadVertrag($person_id, false, $abrechnungsdatum);
 
-	if(count($vertrag->result)>0)
+	if(numberOfElements($vertrag->result)>0)
 	{
 		echo '
 			<script>
@@ -1004,7 +1004,7 @@ function getVerwendung($username, $abrechnungsdatum)
 
 	if($bisverwendung->getVerwendungDatumMonat($username, $abrechnungsdatum))
 	{
-		if(count($bisverwendung->result)>0)
+		if(numberOfElements($bisverwendung->result)>0)
 		{
 			foreach($bisverwendung->result as $row)
 			{

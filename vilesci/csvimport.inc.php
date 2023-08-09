@@ -24,7 +24,7 @@
  * Klnr;Pnr;Unr;Name;LST;SV;Brutto;SV-Beitrag;Lohnsteuer;Abzüge;Netto
  */
 
-if (count(get_included_files()) == 1)
+if (numberOfElements(get_included_files()) == 1)
 	die('Diese Datei sollte nicht direkt aufgerufen werden!');
 
 $stsem_obj = new studiensemester();

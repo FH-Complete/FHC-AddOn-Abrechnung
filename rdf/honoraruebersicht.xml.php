@@ -140,7 +140,7 @@ foreach($abrechnung->result as $row)
 		$vertragdetail = new vertrag();
 		$vertragdetail->loadZugeordnet($row_vertrag->vertrag_id);
 
-		if(count($vertragdetail->result)>0)
+		if(numberOfElements($vertragdetail->result)>0)
 		{
 			foreach($vertragdetail->result as $row_detail)
 			{
